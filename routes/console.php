@@ -8,7 +8,7 @@ use Illuminate\Support\Facades\Schedule;
 |--------------------------------------------------------------------------
 |
 | Run by one cron line on the server (see docs/DEPLOY.md):
-|   * * * * * cd /var/www/journal-system && php artisan schedule:run >> /dev/null 2>&1
+|   * * * * * cd /var/www/journal && php artisan schedule:run >> /dev/null 2>&1
 |
 | Times are Asia/Jakarta (APP_TIMEZONE). The audit log is never pruned: it is
 | the history of who entered, edited and voided what.

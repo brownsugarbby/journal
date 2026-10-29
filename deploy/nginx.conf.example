@@ -1,31 +1,25 @@
-# /etc/nginx/sites-available/journal-system
-# Replace journal.example.com with the real domain. Certbot fills in the
-# certificate lines (docs/DEPLOY.md §5).
+# /etc/nginx/sites-available/journal
+#
+# HTTP only on purpose: works on every Nginx version. Then run
+#   certbot --nginx -d journal.example.com
+# and choose "redirect": certbot adds the HTTPS server, the certificate and
+# the HTTP → HTTPS redirect to this file (docs/DEPLOY.md §5).
+#
+# Replace journal.example.com with the real domain and /var/www/journal with
+# the folder the app was cloned into.
 
 server {
     listen 80;
     listen [::]:80;
     server_name journal.example.com;
-    return 301 https://$host$request_uri;
-}
 
-server {
-    listen 443 ssl;
-    listen [::]:443 ssl;
-    http2 on;
-    server_name journal.example.com;
-
-    root /var/www/journal-system/public;
+    root /var/www/journal/public;
     index index.php;
     charset utf-8;
-
-    # ssl_certificate     /etc/letsencrypt/live/journal.example.com/fullchain.pem;
-    # ssl_certificate_key /etc/letsencrypt/live/journal.example.com/privkey.pem;
 
     add_header X-Frame-Options "SAMEORIGIN" always;
     add_header X-Content-Type-Options "nosniff" always;
     add_header Referrer-Policy "strict-origin-when-cross-origin" always;
-    add_header Strict-Transport-Security "max-age=31536000" always;
 
     # Logo / receipt uploads.
     client_max_body_size 10M;
