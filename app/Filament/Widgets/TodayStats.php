@@ -45,17 +45,17 @@ class TodayStats extends StatsOverviewWidget
         $net = bcsub($dp, $wd, 2);
 
         $stats = [
-            Stat::make('DP', Fields::rupiah($dp))->description(($totals->dp_count ?? 0).' entries')->color('success'),
-            Stat::make('WD', Fields::rupiah($wd))->description(($totals->wd_count ?? 0).' entries')->color('danger'),
-            Stat::make('DP − WD', Fields::rupiah($net))->color(bccomp($net, '0', 2) < 0 ? 'danger' : 'success'),
+            Stat::make(__('DP'), Fields::rupiah($dp))->description(($totals->dp_count ?? 0).' entries')->color('success'),
+            Stat::make(__('WD'), Fields::rupiah($wd))->description(($totals->wd_count ?? 0).' entries')->color('danger'),
+            Stat::make(__('DP − WD'), Fields::rupiah($net))->color(bccomp($net, '0', 2) < 0 ? 'danger' : 'success'),
         ];
 
         if (! $user->isStaffCs()) {
-            $stats[] = Stat::make('Bonus + cashback', Fields::rupiah($totals->bonus ?? 0))->color('warning');
+            $stats[] = Stat::make(__('Bonus + cashback'), Fields::rupiah($totals->bonus ?? 0))->color('warning');
         }
 
         if (! $user->hasFullAccess()) {
-            $stats[] = Stat::make('My entries today', (string) (clone $base)->where('created_by', $user->id)->count());
+            $stats[] = Stat::make(__('My entries today'), (string) (clone $base)->where('created_by', $user->id)->count());
         }
 
         return $stats;

@@ -94,7 +94,7 @@ trait IsReportPage
                 })
                 ->wrap($column->key === 'keterangan'), $columns))
             ->paginated(false)
-            ->emptyStateHeading('No data for this filter');
+            ->emptyStateHeading(__('No data for this filter'));
     }
 
     protected function getHeaderActions(): array
@@ -129,12 +129,12 @@ trait IsReportPage
             ->live();
     }
 
-    protected function brandField(string $allLabel = 'All brands'): Select
+    protected function brandField(?string $allLabel = null): Select
     {
         return Select::make('brand')
             ->label('Brand')
             ->options(Brand::query()->orderBy('code')->pluck('code', 'id')->all())
-            ->placeholder($allLabel)
+            ->placeholder($allLabel ?? __('All brands'))
             ->native()
             ->live();
     }
@@ -153,6 +153,6 @@ trait IsReportPage
 
     protected function brandLabel(): string
     {
-        return $this->brandModel()?->code ?? 'All brands';
+        return $this->brandModel()?->code ?? __('All brands');
     }
 }

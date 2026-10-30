@@ -101,7 +101,7 @@ class JournalService
         $journal = Journal::query()->findOrFail($journal->getKey());
 
         if (! $user->can('update', $journal)) {
-            throw ValidationException::withMessages(['amount' => 'This entry can no longer be edited.']);
+            throw ValidationException::withMessages(['amount' => __('This entry can no longer be edited.')]);
         }
 
         return DB::transaction(function () use ($journal, $data, $user): Journal {
@@ -131,7 +131,7 @@ class JournalService
         $journal = Journal::query()->with('lines')->findOrFail($journal->getKey());
 
         if (! $user->can('void', $journal)) {
-            throw ValidationException::withMessages(['reason' => 'You cannot void this entry.']);
+            throw ValidationException::withMessages(['reason' => __('You cannot void this entry.')]);
         }
 
         return DB::transaction(function () use ($journal, $reason, $user): Journal {
@@ -167,7 +167,7 @@ class JournalService
     public function checkBalance(CompanyAccount $account, string|int|float $actual, ?string $note, User $user): BalanceCheck
     {
         if (! $user->hasFullAccess() && ! $user->canPostOn($account)) {
-            throw ValidationException::withMessages(['actual_balance' => 'You are not assigned to this account.']);
+            throw ValidationException::withMessages(['actual_balance' => __('You are not assigned to this account.')]);
         }
 
         $book = $account->balance();
@@ -193,7 +193,7 @@ class JournalService
         $entryDate = Carbon::parse($data['entry_date'] ?? today())->startOfDay();
 
         if ($entryDate->isFuture()) {
-            throw ValidationException::withMessages(['entry_date' => 'TGL cannot be in the future.']);
+            throw ValidationException::withMessages(['entry_date' => __('TGL cannot be in the future.')]);
         }
 
         if (! in_array($type, [JournalType::Deposit, JournalType::Withdraw, JournalType::Bonus, JournalType::Cashback], true)) {
@@ -207,7 +207,7 @@ class JournalService
         $memberId = trim((string) ($data['member_id'] ?? ''));
 
         if ($memberId === '') {
-            throw ValidationException::withMessages(['member_id' => 'USERNAME (member ID) is required.']);
+            throw ValidationException::withMessages(['member_id' => __('USERNAME (member ID) is required.')]);
         }
 
         $attributes = [
@@ -239,25 +239,25 @@ class JournalService
         $account = CompanyAccount::query()->with('paymentGateway')->find($data['company_account_id'] ?? null);
 
         if (! $account || $account->tier !== AccountTier::Operational || ! $user->canPostOn($account)) {
-            throw ValidationException::withMessages(['company_account_id' => 'You are not assigned to this account.']);
+            throw ValidationException::withMessages(['company_account_id' => __('You are not assigned to this account.')]);
         }
 
         if ($account->currency_id !== $this->baseCurrency()->id) {
-            throw ValidationException::withMessages(['company_account_id' => 'DP/WD accounts must be in the base currency.']);
+            throw ValidationException::withMessages(['company_account_id' => __('DP/WD accounts must be in the base currency.')]);
         }
 
         $brandId = $account->brand_id ?? ($data['brand_id'] ?? null);
         $brand = $brandId ? Brand::query()->find($brandId) : null;
 
         if (! $brand || ! $user->canPostForBrand($brand)) {
-            throw ValidationException::withMessages(['brand_id' => 'Pick a brand you are assigned to.']);
+            throw ValidationException::withMessages(['brand_id' => __('Pick a brand you are assigned to.')]);
         }
 
         $amount = $this->money($data['amount'] ?? null, 'amount');
         $fee = $account->paymentGateway ? $this->money($data['fee'] ?? 0, 'fee', allowZero: true) : '0.00';
 
         if (bccomp($fee, $amount, 2) >= 0 && bccomp($fee, '0', 2) === 1) {
-            throw ValidationException::withMessages(['fee' => 'POTONGAN must be smaller than the amount.']);
+            throw ValidationException::withMessages(['fee' => __('POTONGAN must be smaller than the amount.')]);
         }
 
         return [
@@ -278,13 +278,13 @@ class JournalService
     private function resolveBonus(JournalType $type, array $data, User $user): array
     {
         if ($user->isStaffCs()) {
-            throw ValidationException::withMessages(['bonus_type_id' => 'Staff CS can only enter DP and WD.']);
+            throw ValidationException::withMessages(['bonus_type_id' => __('Staff CS can only enter DP and WD.')]);
         }
 
         $brand = Brand::query()->find($data['brand_id'] ?? null);
 
         if (! $brand || ! $user->canPostForBrand($brand)) {
-            throw ValidationException::withMessages(['brand_id' => 'Pick a brand you are assigned to.']);
+            throw ValidationException::withMessages(['brand_id' => __('Pick a brand you are assigned to.')]);
         }
 
         $kind = $type === JournalType::Cashback ? BonusKind::Cashback : BonusKind::Bonus;
@@ -294,7 +294,7 @@ class JournalService
             ->find($data['bonus_type_id'] ?? null);
 
         if (! $bonusType) {
-            throw ValidationException::withMessages(['bonus_type_id' => 'NAMA BONUS is required.']);
+            throw ValidationException::withMessages(['bonus_type_id' => __('NAMA BONUS is required.')]);
         }
 
         $attributes = [
@@ -393,7 +393,7 @@ class JournalService
         $period = Period::forDate(Carbon::parse($date));
 
         if (! $period->isOpen()) {
-            throw ValidationException::withMessages(['entry_date' => "The books for {$period->label()} are closed."]);
+            throw ValidationException::withMessages(['entry_date' => __('The books for :period are closed.', ['period' => $period->label()])]);
         }
 
         return $period;

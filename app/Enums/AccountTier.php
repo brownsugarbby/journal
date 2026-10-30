@@ -16,8 +16,8 @@ enum AccountTier: string implements HasColor, HasLabel
     public function getLabel(): string
     {
         return match ($this) {
-            self::Operational => 'Operational',
-            self::Pusat => 'Pusat',
+            self::Operational => __('Operational'),
+            self::Pusat => __('Pusat'),
         };
     }
 

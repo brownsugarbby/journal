@@ -11,9 +11,9 @@
     <table style="width: 100%; border-collapse: collapse">
         <thead>
             <tr style="{{ $muted }}">
-                <th style="padding: .25rem .75rem; text-align: left">Currency</th>
+                <th style="padding: .25rem .75rem; text-align: left">{{ __('Currency') }}</th>
                 <th style="{{ $cell }}">Org</th>
-                <th style="{{ $cell }}">{{ $run->pay_type->getLabel() }} full</th>
+                <th style="{{ $cell }}">{{ __(':type full', ['type' => $run->pay_type->getLabel()]) }}</th>
                 <th style="{{ $cell }}">Potong</th>
                 <th style="{{ $cell }}">Pinjaman</th>
                 <th style="{{ $cell }}">Sisa</th>
@@ -35,16 +35,16 @@
                         @if ($row['is_base'])
                             <span style="{{ $muted }}">-</span>
                         @elseif ($row['kurs'] === null)
-                            <span style="color: var(--danger-600)">buy {{ $row['code'] }} first</span>
+                            <span style="color: var(--danger-600)">{{ __('buy :currency first', ['currency' => $row['code']]) }}</span>
                         @else
                             {{ rtrim(rtrim(number_format((float) $row['kurs'], 4, ',', '.'), '0'), ',') }}
-                            @unless ($run->isPaid())<span style="{{ $muted }}">(today)</span>@endunless
+                            @unless ($run->isPaid())<span style="{{ $muted }}">({{ __('today') }})</span>@endunless
                         @endif
                     </td>
                     <td style="{{ $cell }}">{{ $row['idr'] !== null ? Fields::rupiah($row['idr']) : '-' }}</td>
                 </tr>
             @empty
-                <tr><td colspan="8" style="padding: .5rem .75rem; {{ $muted }}">No rows yet.</td></tr>
+                <tr><td colspan="8" style="padding: .5rem .75rem; {{ $muted }}">{{ __('No rows yet.') }}</td></tr>
             @endforelse
         </tbody>
         <tfoot>

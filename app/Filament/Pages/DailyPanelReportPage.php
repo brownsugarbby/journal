@@ -2,7 +2,9 @@
 
 namespace App\Filament\Pages;
 
+use App\Filament\Concerns\TranslatesPageLabels;
 use App\Filament\Support\Fields;
+use App\Filament\Support\MoneyInputColumn;
 use App\Models\Brand;
 use App\Models\DailyPanelReport;
 use App\Models\Period;
@@ -35,6 +37,7 @@ use UnitEnum;
 class DailyPanelReportPage extends Page implements HasTable
 {
     use InteractsWithTable;
+    use TranslatesPageLabels;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedPresentationChartLine;
 
@@ -209,18 +212,15 @@ class DailyPanelReportPage extends Page implements HasTable
             ])
             ->defaultSort('report_date')
             ->paginated(false)
-            ->emptyStateHeading('Pick a brand');
+            ->emptyStateHeading(__('Pick a brand'));
     }
 
     protected function cell(string $name, string $label, bool $integer = false, bool $allowNegative = false): TextInputColumn
     {
-        return TextInputColumn::make($name)
+        return MoneyInputColumn::make($name)
             ->label($label)
-            ->type('number')
-            ->step($integer ? 1 : 'any')
             ->rules(array_filter(['nullable', 'numeric', $integer ? 'integer' : null, $allowNegative ? null : 'min:0']))
-            ->disabled(fn (): bool => $this->isLocked())
-            ->extraInputAttributes(['style' => 'min-width: 7rem; text-align: right']);
+            ->disabled(fn (): bool => $this->isLocked());
     }
 
     protected function user(): User

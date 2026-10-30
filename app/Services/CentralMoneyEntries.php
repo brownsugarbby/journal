@@ -44,7 +44,7 @@ class CentralMoneyEntries
     public function resolve(JournalType $type, array $data, User $user): array
     {
         if ($type !== JournalType::Expense && ! $user->hasFullAccess()) {
-            throw ValidationException::withMessages(['company_account_id' => 'Only a superadmin or leader can enter this.']);
+            throw ValidationException::withMessages(['company_account_id' => __('Only a superadmin or leader can enter this.')]);
         }
 
         return [
@@ -149,11 +149,11 @@ class CentralMoneyEntries
         $to = $this->account($data['target_account_id'] ?? null, 'target_account_id');
 
         if ($from->is($to)) {
-            throw ValidationException::withMessages(['target_account_id' => 'Pick a different account.']);
+            throw ValidationException::withMessages(['target_account_id' => __('Pick a different account.')]);
         }
 
         if ($from->currency_id !== $to->currency_id) {
-            throw ValidationException::withMessages(['target_account_id' => 'Both accounts must use the same currency. Use Beli valas to change currency.']);
+            throw ValidationException::withMessages(['target_account_id' => __('Both accounts must use the same currency. Use Beli valas to change currency.')]);
         }
 
         $this->requireKurs($from);
@@ -176,11 +176,11 @@ class CentralMoneyEntries
         $to = $this->account($data['target_account_id'] ?? null, 'target_account_id');
 
         if (! $from->isBaseCurrency()) {
-            throw ValidationException::withMessages(['company_account_id' => 'Pay from a rupiah account.']);
+            throw ValidationException::withMessages(['company_account_id' => __('Pay from a rupiah account.')]);
         }
 
         if ($to->isBaseCurrency()) {
-            throw ValidationException::withMessages(['target_account_id' => 'Pick a THB / USD account.']);
+            throw ValidationException::withMessages(['target_account_id' => __('Pick a THB / USD account.')]);
         }
 
         $units = $this->money($data['foreign_amount'] ?? null, 'foreign_amount');
@@ -207,7 +207,7 @@ class CentralMoneyEntries
         $account = $this->account($data['company_account_id'] ?? null, 'company_account_id');
 
         if (! $user->hasFullAccess() && (! $user->can_enter_expense || $user->isStaffCs() || ! $user->canPostOn($account))) {
-            throw ValidationException::withMessages(['company_account_id' => 'You cannot pay expenses from this account.']);
+            throw ValidationException::withMessages(['company_account_id' => __('You cannot pay expenses from this account.')]);
         }
 
         $category = Category::query()
@@ -217,13 +217,13 @@ class CentralMoneyEntries
             ->find($data['category_id'] ?? null);
 
         if (! $category) {
-            throw ValidationException::withMessages(['category_id' => 'Pick an expense category.']);
+            throw ValidationException::withMessages(['category_id' => __('Pick an expense category.')]);
         }
 
         $status = ExpenseStatus::query()->where('is_active', true)->find($data['expense_status_id'] ?? null);
 
         if (! $status) {
-            throw ValidationException::withMessages(['expense_status_id' => 'Pick a status.']);
+            throw ValidationException::withMessages(['expense_status_id' => __('Pick a status.')]);
         }
 
         $direction = $this->enum(ExpenseDirection::class, $data['kind'] ?? null, 'kind');
@@ -253,7 +253,7 @@ class CentralMoneyEntries
         $counterparty = LoanCounterparty::query()->where('is_active', true)->find($data['loan_counterparty_id'] ?? null);
 
         if (! $counterparty) {
-            throw ValidationException::withMessages(['loan_counterparty_id' => 'Pick who the loan is with.']);
+            throw ValidationException::withMessages(['loan_counterparty_id' => __('Pick who the loan is with.')]);
         }
 
         $kind = $this->enum(LoanKind::class, $data['kind'] ?? null, 'kind');
@@ -280,7 +280,7 @@ class CentralMoneyEntries
         $partner = Partner::query()->where('is_active', true)->find($data['partner_id'] ?? null);
 
         if (! $partner) {
-            throw ValidationException::withMessages(['partner_id' => 'Pick a partner.']);
+            throw ValidationException::withMessages(['partner_id' => __('Pick a partner.')]);
         }
 
         $kind = $this->enum(PartnerKind::class, $data['kind'] ?? null, 'kind');
@@ -303,7 +303,7 @@ class CentralMoneyEntries
         $account = $this->account($data['company_account_id'] ?? null, 'company_account_id');
 
         if (blank($data['note'] ?? null)) {
-            throw ValidationException::withMessages(['note' => 'Say why the balance is adjusted.']);
+            throw ValidationException::withMessages(['note' => __('Say why the balance is adjusted.')]);
         }
 
         $this->requireKurs($account);
@@ -320,7 +320,7 @@ class CentralMoneyEntries
         $account = CompanyAccount::query()->with('currency')->where('is_active', true)->find($id);
 
         if (! $account) {
-            throw ValidationException::withMessages([$field => 'Pick an account.']);
+            throw ValidationException::withMessages([$field => __('Pick an account.')]);
         }
 
         return $account;
@@ -333,7 +333,7 @@ class CentralMoneyEntries
     {
         if ($account->averageKurs() === null) {
             throw ValidationException::withMessages([
-                'company_account_id' => "{$account->label} has no kurs yet: buy {$account->currency->code} first or set its opening kurs.",
+                'company_account_id' => __(':account has no kurs yet: buy :currency first or set its opening kurs.', ['account' => $account->label, 'currency' => $account->currency->code]),
             ]);
         }
     }
@@ -354,7 +354,7 @@ class CentralMoneyEntries
         $case = $value instanceof $enum ? $value : $enum::tryFrom((string) $value);
 
         if (! $case) {
-            throw ValidationException::withMessages([$field => 'Pick a type.']);
+            throw ValidationException::withMessages([$field => __('Pick a type.')]);
         }
 
         return $case;

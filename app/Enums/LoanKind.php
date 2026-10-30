@@ -19,11 +19,11 @@ enum LoanKind: string implements HasColor, HasLabel
     public function getLabel(): string
     {
         return match ($this) {
-            self::Given => 'Kasih pinjaman',
-            self::Received => 'Terima pinjaman',
-            self::RepaidToUs => 'Dibayar balik',
-            self::RepaidByUs => 'Bayar utang',
-            self::InterestPaid => 'Bayar bunga',
+            self::Given => __('Kasih pinjaman'),
+            self::Received => __('Terima pinjaman'),
+            self::RepaidToUs => __('Dibayar balik'),
+            self::RepaidByUs => __('Bayar utang'),
+            self::InterestPaid => __('Bayar bunga'),
         };
     }
 

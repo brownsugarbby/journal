@@ -13,8 +13,8 @@ enum AdjustmentDirection: string implements HasColor, HasLabel
     public function getLabel(): string
     {
         return match ($this) {
-            self::Plus => 'Tambah saldo',
-            self::Minus => 'Kurangi saldo',
+            self::Plus => __('Tambah saldo'),
+            self::Minus => __('Kurangi saldo'),
         };
     }
 

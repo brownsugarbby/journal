@@ -17,9 +17,9 @@ enum PayColumnKind: string implements HasColor, HasLabel
     public function getLabel(): string
     {
         return match ($this) {
-            self::Info => 'Info',
-            self::Addition => 'Addition',
-            self::Deduction => 'Deduction',
+            self::Info => __('Info'),
+            self::Addition => __('Addition'),
+            self::Deduction => __('Deduction'),
         };
     }
 

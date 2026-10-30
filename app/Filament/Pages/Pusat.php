@@ -10,6 +10,7 @@ use App\Enums\ExpenseDirection;
 use App\Enums\JournalType;
 use App\Enums\LoanKind;
 use App\Enums\PartnerKind;
+use App\Filament\Concerns\TranslatesPageLabels;
 use App\Filament\Pages\Concerns\WorksWithJournals;
 use App\Filament\Support\Fields;
 use App\Models\Category;
@@ -69,6 +70,7 @@ use UnitEnum;
 class Pusat extends Page implements HasTable
 {
     use InteractsWithTable;
+    use TranslatesPageLabels;
     use WorksWithJournals;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedBuildingLibrary;
@@ -265,10 +267,10 @@ class Pusat extends Page implements HasTable
     protected function sheetSummary(): string
     {
         return match ($this->kind()) {
-            'loans' => 'Outstanding: they owe us '.Fields::rupiah($this->loanTotals()['receivable'])
+            'loans' => __('Outstanding: they owe us :amount', ['amount' => Fields::rupiah($this->loanTotals()['receivable'])])
                 .'   ·   we owe '.Fields::rupiah($this->loanTotals()['payable']),
             'partner' => 'SALDO '.Fields::rupiah($this->partner()->balance()),
-            'expenses' => 'Total '.$this->monthDate()->translatedFormat('F Y').': '.Fields::rupiah($this->expenseTotal()),
+            'expenses' => __('Total :month: :amount', ['month' => $this->monthDate()->translatedFormat('F Y'), 'amount' => Fields::rupiah($this->expenseTotal())]),
             default => '',
         };
     }
@@ -313,7 +315,7 @@ class Pusat extends Page implements HasTable
                 ->icon(Heroicon::OutlinedScale)
                 ->color('gray')
                 ->visible(fn (): bool => $this->account() !== null)
-                ->modalDescription(fn (): string => 'Type the real balance. Book balance now: '.Fields::rupiah($this->account()->balance()))
+                ->modalDescription(fn (): string => __('Type the real balance. Book balance now: :balance', ['balance' => Fields::rupiah($this->account()->balance())]))
                 ->schema([
                     Fields::money('actual_balance')->label('Actual balance')->required()->autofocus(),
                     Textarea::make('note')->rows(2),
@@ -323,7 +325,7 @@ class Pusat extends Page implements HasTable
                     $this->refreshSheets();
 
                     Notification::make()
-                        ->title($check->isMatching() ? 'Saldo match' : 'Selisih '.Fields::rupiah($check->difference))
+                        ->title($check->isMatching() ? __('Saldo match') : __('Selisih :amount', ['amount' => Fields::rupiah($check->difference)]))
                         ->{$check->isMatching() ? 'success' : 'danger'}()
                         ->send();
                 }),
@@ -332,7 +334,7 @@ class Pusat extends Page implements HasTable
                 ->icon(Heroicon::OutlinedAdjustmentsHorizontal)
                 ->color('gray')
                 ->visible(fn (): bool => $this->account() !== null && $this->user()->hasFullAccess())
-                ->modalDescription('Corrects the book balance (e.g. after Cek Saldo). Goes to "Penyesuaian Saldo", outside the P&L.')
+                ->modalDescription(__('Corrects the book balance (e.g. after Cek Saldo). Goes to "Penyesuaian Saldo", outside the P&L.'))
                 ->schema([
                     Select::make('kind')->label('Jenis')->options(AdjustmentDirection::class)->required()->native(),
                     Fields::money('amount')->label('Jumlah')->required(),
@@ -360,7 +362,7 @@ class Pusat extends Page implements HasTable
         return $schema
             ->statePath('entry')
             ->components([
-                Grid::make(['default' => 1, 'sm' => 2, 'lg' => 4, 'xl' => count($fields) + 3])->schema($fields),
+                Grid::make()->extraAttributes(['class' => 'fi-entry-row'])->schema($fields),
             ]);
     }
 
@@ -397,7 +399,7 @@ class Pusat extends Page implements HasTable
             $kurs = $get('kurs');
 
             if (is_numeric($units) && is_numeric($kurs)) {
-                $set('amount', (int) round((float) $units * (float) $kurs));
+                $set('amount', Fields::rupiah(round((float) $units * (float) $kurs)));
             }
         };
 
@@ -422,8 +424,8 @@ class Pusat extends Page implements HasTable
                 ->required()
                 ->live(onBlur: true)
                 ->afterStateUpdated($recalculate)
-                ->helperText('Money changer rate today'),
-            Fields::money('amount')->label('Total Rp')->required()->helperText('Edit if the changer rounded'),
+                ->helperText(__('Money changer rate today')),
+            Fields::money('amount')->label('Total Rp')->required()->helperText(__('Edit if the changer rounded')),
             $this->wide(TextInput::make('note')->label('Keterangan')->maxLength(500)),
             $this->saveButton(),
         ];
@@ -465,7 +467,7 @@ class Pusat extends Page implements HasTable
             Select::make('brand_id')->label('Web')
                 ->options(fn (): array => $this->user()->accessibleBrands()->pluck('code', 'id')->all())
                 ->native()
-                ->placeholder('Shared'),
+                ->placeholder(__('Shared')),
             $this->saveButton(),
         ];
     }
@@ -527,7 +529,7 @@ class Pusat extends Page implements HasTable
 
     protected function dateField(): DatePicker
     {
-        return $this->wide(DatePicker::make('entry_date')->label('Tgl')->native()->maxDate(today())->required());
+        return DatePicker::make('entry_date')->label('Tgl')->native()->maxDate(today())->required();
     }
 
     /**
@@ -538,7 +540,7 @@ class Pusat extends Page implements HasTable
      */
     protected function wide($field)
     {
-        return $field->columnSpan(['default' => 1, 'xl' => 2]);
+        return $field->extraFieldWrapperAttributes(['class' => 'fi-entry-wide'], merge: true);
     }
 
     protected function saveButton(): Actions
@@ -598,7 +600,7 @@ class Pusat extends Page implements HasTable
 
         if ($masuk === $keluar) {
             throw ValidationException::withMessages([
-                'entry.keluar' => $masuk ? 'Fill either KELUAR or MASUK, not both.' : 'Fill KELUAR (spent) or MASUK (refund).',
+                'entry.keluar' => $masuk ? __('Fill either KELUAR or MASUK, not both.') : __('Fill KELUAR (spent) or MASUK (refund).'),
             ]);
         }
 
@@ -628,7 +630,7 @@ class Pusat extends Page implements HasTable
         $this->refreshSheets();
 
         Notification::make()
-            ->title($type->getLabel().' '.Fields::rupiah($journal->amount).' saved')
+            ->title(__(':type :amount saved', ['type' => $type->getLabel(), 'amount' => Fields::rupiah($journal->amount)]))
             ->body($journal->number)
             ->success()
             ->duration(2500)
@@ -679,10 +681,10 @@ class Pusat extends Page implements HasTable
             ->defaultSort('journal_id', 'desc')
             ->paginated([25, 50, 100])
             ->defaultPaginationPageOption(50)
-            ->emptyStateHeading('No entries yet')
+            ->emptyStateHeading(__('No entries yet'))
             ->emptyStateDescription($this->isForeign()
                 ? 'Use the row above to record a purchase at today\'s money changer kurs.'
-                : 'Use the row above to record a transfer, e.g. from an operational account into this one.');
+                : __('Use the row above to record a transfer, e.g. from an operational account into this one.'));
     }
 
     protected function expenseTable(Table $table): Table
@@ -708,7 +710,7 @@ class Pusat extends Page implements HasTable
                     // Status is not money: it can change any time the month is open.
                     ->disabled(fn (Journal $record): bool => $record->isVoided() || $record->isReversal() || ! $record->period->isOpen()
                         || (! $this->user()->hasFullAccess() && $record->created_by !== $this->user()->id)),
-                TextColumn::make('brand.code')->label('Web')->badge()->placeholder('Shared'),
+                TextColumn::make('brand.code')->label('Web')->badge()->placeholder(__('Shared')),
                 TextColumn::make('created_at')->label('Waktu')->dateTime('d/m H:i'),
                 TextColumn::make('createdBy.username')->label('Op'),
                 $this->statusBadge(fn (Journal $record): Journal => $record),
@@ -717,7 +719,7 @@ class Pusat extends Page implements HasTable
             ->defaultSort('id', 'desc')
             ->paginated([25, 50, 100])
             ->defaultPaginationPageOption(50)
-            ->emptyStateHeading('No expenses this month');
+            ->emptyStateHeading(__('No expenses this month'));
     }
 
     protected function loanTable(Table $table): Table
@@ -733,7 +735,7 @@ class Pusat extends Page implements HasTable
                 $this->moneyColumn('masuk', 'Masuk', fn (Journal $record): ?string => $this->accountSign($record) > 0 ? (string) $record->amount : null)->color('success'),
                 TextColumn::make('companyAccount.label')->label('Akun'),
                 $this->moneyColumn('running_total', 'Saldo', fn (Journal $record): string => (string) $record->running_total)->weight('bold')
-                    ->tooltip('> 0: owed to us · < 0: we owe'),
+                    ->tooltip(__('> 0: owed to us · < 0: we owe')),
                 TextColumn::make('note')->label('Keterangan')->placeholder('-')->wrap(),
                 TextColumn::make('createdBy.username')->label('Op'),
                 $this->statusBadge(fn (Journal $record): Journal => $record),
@@ -741,8 +743,8 @@ class Pusat extends Page implements HasTable
             ->recordActions([$this->voidAction(fn (Journal $record): Journal => $record)])
             ->defaultSort('id', 'desc')
             ->paginated([25, 50, 100])
-            ->emptyStateHeading('No loans yet')
-            ->emptyStateDescription('Add people on People → Loan Counterparties, then record loans here.');
+            ->emptyStateHeading(__('No loans yet'))
+            ->emptyStateDescription(__('Add people on People → Loan Counterparties, then record loans here.'));
     }
 
     protected function partnerTable(Table $table): Table
@@ -764,7 +766,7 @@ class Pusat extends Page implements HasTable
             ->recordActions([$this->voidAction(fn (Journal $record): Journal => $record)])
             ->defaultSort('id', 'desc')
             ->paginated([25, 50, 100])
-            ->emptyStateHeading('No entries yet');
+            ->emptyStateHeading(__('No entries yet'));
     }
 
     /**

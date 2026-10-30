@@ -3,6 +3,7 @@
 namespace App\Filament\Pages\Reports;
 
 use App\Enums\JournalType;
+use App\Filament\Concerns\TranslatesPageLabels;
 use App\Filament\Pages\Reports\Concerns\IsReportPage;
 use App\Models\Journal;
 use App\Models\Member;
@@ -23,6 +24,7 @@ use UnitEnum;
 class LaporanMember extends Page implements HasTable
 {
     use IsReportPage;
+    use TranslatesPageLabels;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedUserGroup;
 

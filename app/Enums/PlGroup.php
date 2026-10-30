@@ -18,10 +18,10 @@ enum PlGroup: string implements HasColor, HasLabel
     public function getLabel(): string
     {
         return match ($this) {
-            self::Pendapatan => 'Pendapatan',
-            self::BiayaTetap => 'Biaya Tetap',
-            self::BiayaVariable => 'Biaya Variable',
-            self::NotInPl => 'Not in P&L',
+            self::Pendapatan => __('Pendapatan'),
+            self::BiayaTetap => __('Biaya Tetap'),
+            self::BiayaVariable => __('Biaya Variable'),
+            self::NotInPl => __('Not in P&L'),
         };
     }
 

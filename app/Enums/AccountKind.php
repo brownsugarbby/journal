@@ -17,9 +17,9 @@ enum AccountKind: string implements HasColor, HasLabel
     public function getLabel(): string
     {
         return match ($this) {
-            self::Bank => 'Bank',
-            self::Gateway => 'Payment gateway',
-            self::Cash => 'Cash',
+            self::Bank => __('Bank'),
+            self::Gateway => __('Payment gateway'),
+            self::Cash => __('Cash'),
         };
     }
 

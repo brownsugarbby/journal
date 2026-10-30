@@ -2,6 +2,7 @@
 
 namespace App\Filament\Pages\Reports;
 
+use App\Filament\Concerns\TranslatesPageLabels;
 use App\Filament\Pages\Reports\Concerns\IsReportPage;
 use App\Models\CompanyAccount;
 use App\Reports\ReportColumn;
@@ -20,6 +21,7 @@ use UnitEnum;
 class LaporanRekonsiliasi extends Page implements HasTable
 {
     use IsReportPage;
+    use TranslatesPageLabels;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedScale;
 
@@ -62,7 +64,7 @@ class LaporanRekonsiliasi extends Page implements HasTable
 
         return new ReportTable(
             title: 'Laporan Rekonsiliasi',
-            subtitle: 'As of '.now()->format('d/m/Y H:i'),
+            subtitle: __('As of :date', ['date' => now()->format('d/m/Y H:i')]),
             columns: [
                 ReportColumn::text('rekening', 'Rekening'),
                 ReportColumn::text('tier', 'Tier'),
@@ -74,7 +76,7 @@ class LaporanRekonsiliasi extends Page implements HasTable
                 ReportColumn::text('dicek', 'Dicek'),
             ],
             rows: $rows,
-            notes: ['Selisih = saldo bank − saldo buku at the time of the last Cek Saldo. Fix a selisih with a Penyesuaian on Kas Pusat or by finding the missing entry.'],
+            notes: [__('Selisih = saldo bank − saldo buku at the time of the last Cek Saldo. Fix a selisih with a Penyesuaian on Kas Pusat or by finding the missing entry.')],
         );
     }
 }

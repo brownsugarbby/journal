@@ -3,6 +3,7 @@
 namespace App\Filament\Pages;
 
 use App\Enums\AccountTier;
+use App\Filament\Concerns\TranslatesPageLabels;
 use App\Filament\Support\Fields;
 use App\Models\BalanceCheck;
 use App\Models\CompanyAccount;
@@ -35,6 +36,7 @@ use UnitEnum;
 class SaldoPusat extends Page implements HasTable
 {
     use InteractsWithTable;
+    use TranslatesPageLabels;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedChartPie;
 
@@ -163,14 +165,14 @@ class SaldoPusat extends Page implements HasTable
                     ->label('Nilai Rp')
                     ->state(fn (CompanyAccount $record): ?string => $record->idrValue($this->balanceOf($record)))
                     ->formatStateUsing(fn ($state) => Fields::rupiah($state))
-                    ->placeholder('No kurs yet')
+                    ->placeholder(__('No kurs yet'))
                     ->alignEnd(),
-                TextColumn::make('max_balance')->label('Max')->formatStateUsing(fn ($state) => Fields::rupiah($state))->placeholder('No limit')->alignEnd(),
+                TextColumn::make('max_balance')->label('Max')->formatStateUsing(fn ($state) => Fields::rupiah($state))->placeholder(__('No limit'))->alignEnd(),
                 TextColumn::make('last_difference')
                     ->label('Cek saldo')
-                    ->formatStateUsing(fn ($state): string => (float) $state === 0.0 ? 'Match' : 'Selisih '.Fields::rupiah($state))
+                    ->formatStateUsing(fn ($state): string => (float) $state === 0.0 ? __('Match') : __('Selisih :amount', ['amount' => Fields::rupiah($state)]))
                     ->color(fn ($state): string => (float) $state === 0.0 ? 'success' : 'danger')
-                    ->placeholder('Never'),
+                    ->placeholder(__('Never')),
             ])
             ->defaultGroup(Group::make('currency.code')->label('')->titlePrefixedWithLabel(false))
             ->recordUrl(fn (CompanyAccount $record): string => Pusat::getUrl(['tab' => "acc-{$record->id}"]))

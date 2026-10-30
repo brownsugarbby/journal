@@ -22,17 +22,17 @@ enum JournalType: string implements HasColor, HasLabel
     public function getLabel(): string
     {
         return match ($this) {
-            self::Deposit => 'DP',
-            self::Withdraw => 'WD',
-            self::Bonus => 'Bonus',
-            self::Cashback => 'Cashback',
-            self::Transfer => 'Transfer',
-            self::CurrencyPurchase => 'Beli valas',
-            self::Expense => 'Pengeluaran',
-            self::Loan => 'Pinjaman',
-            self::Partner => 'Partner',
-            self::Adjustment => 'Penyesuaian',
-            self::Payroll => 'Gaji / UM',
+            self::Deposit => __('DP'),
+            self::Withdraw => __('WD'),
+            self::Bonus => __('Bonus'),
+            self::Cashback => __('Cashback'),
+            self::Transfer => __('Transfer'),
+            self::CurrencyPurchase => __('Beli valas'),
+            self::Expense => __('Pengeluaran'),
+            self::Loan => __('Pinjaman'),
+            self::Partner => __('Partner'),
+            self::Adjustment => __('Penyesuaian'),
+            self::Payroll => __('Gaji / UM'),
         };
     }
 

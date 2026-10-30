@@ -4,6 +4,7 @@ namespace App\Filament\Pages\Reports;
 
 use App\Enums\AccountKind;
 use App\Enums\JournalType;
+use App\Filament\Concerns\TranslatesPageLabels;
 use App\Filament\Pages\Reports\Concerns\IsReportPage;
 use App\Models\DailyPanelReport;
 use App\Models\Journal;
@@ -35,6 +36,7 @@ use UnitEnum;
 class LaporanTutupBuku extends Page implements HasTable
 {
     use IsReportPage;
+    use TranslatesPageLabels;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedCalendarDays;
 
@@ -142,8 +144,8 @@ class LaporanTutupBuku extends Page implements HasTable
             ],
             rows: $rows,
             notes: [
-                'Money columns from the jurnal (voided entries excluded). TOTAL DP = bank, TOTAL DP PGA = payment gateway (MASUK, before POTONGAN). Bonus manual = bonus + cashback entered in the jurnal.',
-                'Panel columns from the Daily Panel Report. Selisih DP = DP all − From DP; Selisih WD = WD all − Form bersih (WD). Red = money and panel do not match.',
+                __('Money columns from the jurnal (voided entries excluded). TOTAL DP = bank, TOTAL DP PGA = payment gateway (MASUK, before POTONGAN). Bonus manual = bonus + cashback entered in the jurnal.'),
+                __('Panel columns from the Daily Panel Report. Selisih DP = DP all − From DP; Selisih WD = WD all − Form bersih (WD). Red = money and panel do not match.'),
             ],
             landscape: true,
         );

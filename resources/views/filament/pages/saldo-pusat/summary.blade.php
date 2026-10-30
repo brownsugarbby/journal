@@ -9,7 +9,7 @@
 
 <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr)); gap: 1rem; font-size: .875rem">
     <div style="{{ $card }}">
-        <div style="font-weight: 700; margin-bottom: .5rem">Total saldo pusat</div>
+        <div style="font-weight: 700; margin-bottom: .5rem">{{ __('Total saldo pusat') }}</div>
         @foreach ($currencyTotals as $total)
             <div style="{{ $row }}">
                 <span>{{ $total['code'] }}</span>
@@ -22,7 +22,7 @@
             </div>
         @endforeach
         <div style="{{ $row }}; border-top: 1px solid var(--gray-200); margin-top: .25rem; padding-top: .5rem; font-weight: 700">
-            <span>Total in Rp</span>
+            <span>{{ __('Total in Rp') }}</span>
             <span>{{ Fields::rupiah($grandTotalIdr) }}</span>
         </div>
     </div>
@@ -41,23 +41,23 @@
             <div style="{{ $row }}">
                 <span>{{ $loan['name'] }}</span>
                 <span style="{{ bccomp($loan['balance'], '0', 2) < 0 ? 'color: var(--danger-600)' : '' }}">
-                    {{ bccomp($loan['balance'], '0', 2) < 0 ? 'we owe ' : 'owes us ' }}{{ Fields::rupiah(ltrim($loan['balance'], '-')) }}
+                    {{ bccomp($loan['balance'], '0', 2) < 0 ? __('we owe :amount', ['amount' => Fields::rupiah(ltrim($loan['balance'], '-'))]) : __('owes us :amount', ['amount' => Fields::rupiah($loan['balance'])]) }}
                 </span>
             </div>
         @empty
-            <div style="{{ $muted }}">Nothing outstanding</div>
+            <div style="{{ $muted }}">{{ __('Nothing outstanding') }}</div>
         @endforelse
     </div>
 
     <div style="{{ $card }}">
-        <div style="font-weight: 700; margin-bottom: .5rem">Partners</div>
+        <div style="font-weight: 700; margin-bottom: .5rem">{{ __('Partners') }}</div>
         @forelse ($partners as $partner)
             <div style="{{ $row }}">
                 <span>{{ $partner['name'] }}</span>
                 <span>{{ Fields::rupiah($partner['balance']) }}</span>
             </div>
         @empty
-            <div style="{{ $muted }}">No partners</div>
+            <div style="{{ $muted }}">{{ __('No partners') }}</div>
         @endforelse
     </div>
 </div>

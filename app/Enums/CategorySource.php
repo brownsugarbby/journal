@@ -16,8 +16,8 @@ enum CategorySource: string implements HasColor, HasLabel
     public function getLabel(): string
     {
         return match ($this) {
-            self::Manual => 'Manual',
-            self::Auto => 'Auto',
+            self::Manual => __('Manual'),
+            self::Auto => __('Auto'),
         };
     }
 

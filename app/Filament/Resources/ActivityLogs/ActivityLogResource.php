@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\ActivityLogs;
 
+use App\Filament\Concerns\TranslatesResourceLabels;
 use App\Filament\Resources\ActivityLogs\Pages\ListActivityLogs;
 use App\Filament\Resources\ActivityLogs\Tables\ActivityLogsTable;
 use BackedEnum;
@@ -17,6 +18,8 @@ use UnitEnum;
 
 class ActivityLogResource extends Resource
 {
+    use TranslatesResourceLabels;
+
     protected static ?string $model = Activity::class;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedClipboardDocumentList;
@@ -41,20 +44,21 @@ class ActivityLogResource extends Resource
                     ->dateTime('d M Y H:i:s'),
                 TextEntry::make('causer.name')
                     ->label('Who')
-                    ->placeholder('System / guest'),
+                    ->placeholder(__('System / guest')),
                 TextEntry::make('log_name')
                     ->label('Log')
                     ->badge(),
                 TextEntry::make('event')
                     ->badge(),
                 TextEntry::make('description')
+                    ->formatStateUsing(fn (?string $state): ?string => $state ? __($state) : $state)
                     ->columnSpanFull(),
                 TextEntry::make('subject_type')
                     ->label('Subject')
                     ->formatStateUsing(fn (?string $state, Activity $record): string => $state
                         ? class_basename($state).' #'.$record->subject_id
                         : '-'),
-                Section::make('Changes')
+                Section::make(__('Changes'))
                     ->columnSpanFull()
                     ->collapsible()
                     ->schema([
@@ -63,7 +67,7 @@ class ActivityLogResource extends Resource
                             ->state(fn (Activity $record): ?array => $record->attribute_changes?->toArray())
                             ->placeholder('-'),
                     ]),
-                Section::make('Properties')
+                Section::make(__('Properties'))
                     ->columnSpanFull()
                     ->collapsible()
                     ->schema([

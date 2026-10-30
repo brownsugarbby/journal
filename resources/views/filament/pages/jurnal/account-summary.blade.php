@@ -14,13 +14,13 @@
     </div>
 
     <div>
-        <span style="{{ $muted }}">Max</span>
-        <span style="margin-inline-start: .25rem">{{ $account->max_balance !== null ? Fields::rupiah($account->max_balance) : 'No limit' }}</span>
+        <span style="{{ $muted }}">{{ __('Max') }}</span>
+        <span style="margin-inline-start: .25rem">{{ $account->max_balance !== null ? Fields::rupiah($account->max_balance) : __('No limit') }}</span>
     </div>
 
     @if (! empty($kurs))
         <div>
-            <span style="{{ $muted }}">Avg kurs</span>
+            <span style="{{ $muted }}">{{ __('Avg kurs') }}</span>
             <span style="margin-inline-start: .25rem">{{ rtrim(rtrim(number_format((float) $kurs, 4, ',', '.'), '0'), ',') }}</span>
         </div>
 
@@ -31,23 +31,23 @@
     @endif
 
     <div>
-        <span style="{{ $muted }}">Provider</span>
+        <span style="{{ $muted }}">{{ __('Provider') }}</span>
         <span style="margin-inline-start: .25rem">{{ $account->providerName() }}</span>
     </div>
 
     <div>
-        <span style="{{ $muted }}">Cek saldo</span>
+        <span style="{{ $muted }}">{{ __('Cek saldo') }}</span>
         @if ($lastCheck)
             <span style="margin-inline-start: .25rem; {{ $lastCheck->isMatching() ? $success : $danger }}">
-                {{ $lastCheck->isMatching() ? 'Match' : 'Selisih '.Fields::rupiah($lastCheck->difference) }}
+                {{ $lastCheck->isMatching() ? __('Match') : __('Selisih :amount', ['amount' => Fields::rupiah($lastCheck->difference)]) }}
             </span>
-            <span style="{{ $muted }}">· {{ $lastCheck->created_at->format('d M H:i') }} · {{ $lastCheck->createdBy->username }}</span>
+            <span style="{{ $muted }}">· {{ $lastCheck->created_at->translatedFormat('d M H:i') }} · {{ $lastCheck->createdBy->username }}</span>
         @else
-            <span style="margin-inline-start: .25rem; {{ $muted }}">Never</span>
+            <span style="margin-inline-start: .25rem; {{ $muted }}">{{ __('Never') }}</span>
         @endif
     </div>
 
     @if ($overMax)
-        <div style="{{ $danger }}">Over max balance: transfer to pusat.</div>
+        <div style="{{ $danger }}">{{ __('Over max balance: transfer to pusat.') }}</div>
     @endif
 </div>

@@ -25,7 +25,7 @@ class ActivityLogsTable
                     ->sortable(),
                 TextColumn::make('causer.name')
                     ->label('Who')
-                    ->placeholder('System / guest'),
+                    ->placeholder(__('System / guest')),
                 TextColumn::make('log_name')
                     ->label('Log')
                     ->badge(),
@@ -38,6 +38,7 @@ class ActivityLogsTable
                         default => 'gray',
                     }),
                 TextColumn::make('description')
+                    ->formatStateUsing(fn (?string $state): ?string => $state ? __($state) : $state)
                     ->searchable()
                     ->wrap(),
                 TextColumn::make('subject_type')

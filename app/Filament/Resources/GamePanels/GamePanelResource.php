@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\GamePanels;
 
+use App\Filament\Concerns\TranslatesResourceLabels;
 use App\Filament\Resources\GamePanels\Pages\ManageGamePanels;
 use App\Filament\Support\Fields;
 use App\Models\GamePanel;
@@ -18,6 +19,8 @@ use UnitEnum;
 
 class GamePanelResource extends Resource
 {
+    use TranslatesResourceLabels;
+
     protected static ?string $model = GamePanel::class;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedComputerDesktop;
@@ -41,7 +44,7 @@ class GamePanelResource extends Resource
                     ->label('Panel URL')
                     ->url()
                     ->maxLength(255)
-                    ->helperText('Login credentials are not stored here.'),
+                    ->helperText(__('Login credentials are not stored here.')),
                 Fields::activeToggle(),
             ]);
     }

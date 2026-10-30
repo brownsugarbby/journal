@@ -24,7 +24,7 @@ class ListPayRuns extends ListRecords
             Action::make('newRun')
                 ->label('New pay run')
                 ->icon(Heroicon::OutlinedPlus)
-                ->modalDescription('Creates the sheet with every active employee who has an amount for this pay type.')
+                ->modalDescription(__('Creates the sheet with every active employee who has an amount for this pay type.'))
                 ->schema([
                     Select::make('pay_type')
                         ->label('Type')
@@ -44,7 +44,7 @@ class ListPayRuns extends ListRecords
                         ->native()
                         ->default(today())
                         ->required()
-                        ->helperText('UM is usually paid on the 5th.'),
+                        ->helperText(__('UM is usually paid on the 5th.')),
                 ])
                 ->action(function (array $data, Action $action): void {
                     [$year, $month] = array_map('intval', explode('-', $data['month']));
@@ -55,7 +55,7 @@ class ListPayRuns extends ListRecords
                         $user = auth()->user();
                         $run = app(PayrollService::class)->create($type, $year, $month, $data['pay_date'], $user);
                     } catch (ValidationException $exception) {
-                        Notification::make()->title('Not created')->body(collect($exception->errors())->flatten()->join(' '))->danger()->send();
+                        Notification::make()->title(__('Not created'))->body(collect($exception->errors())->flatten()->join(' '))->danger()->send();
                         $action->halt();
                     }
 

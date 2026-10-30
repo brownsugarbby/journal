@@ -13,8 +13,8 @@ enum BankType: string implements HasColor, HasLabel
     public function getLabel(): string
     {
         return match ($this) {
-            self::Bank => 'Bank',
-            self::EWallet => 'E-wallet',
+            self::Bank => __('Bank'),
+            self::EWallet => __('E-wallet'),
         };
     }
 

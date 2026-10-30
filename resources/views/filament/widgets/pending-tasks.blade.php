@@ -16,7 +16,7 @@
                 @endforeach
             </ul>
         @else
-            <p style="font-size: .875rem; color: var(--gray-500)">Nothing pending.</p>
+            <p style="font-size: .875rem; color: var(--gray-500)">{{ __('Nothing pending.') }}</p>
         @endif
     </x-filament::section>
 </x-filament-widgets::widget>

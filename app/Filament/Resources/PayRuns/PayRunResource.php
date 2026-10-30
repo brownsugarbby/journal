@@ -4,6 +4,7 @@ namespace App\Filament\Resources\PayRuns;
 
 use App\Enums\PayRunStatus;
 use App\Enums\PayType;
+use App\Filament\Concerns\TranslatesResourceLabels;
 use App\Filament\Resources\PayRuns\Pages\ListPayRuns;
 use App\Filament\Resources\PayRuns\Pages\PayRunSheet;
 use App\Filament\Support\Fields;
@@ -21,6 +22,8 @@ use UnitEnum;
 
 class PayRunResource extends Resource
 {
+    use TranslatesResourceLabels;
+
     protected static ?string $model = PayRun::class;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedBanknotes;
@@ -55,7 +58,7 @@ class PayRunResource extends Resource
                     ->label('Total all (Rp)')
                     ->state(fn (PayRun $record): ?string => app(PayrollService::class)->totals($record)['total_all'])
                     ->formatStateUsing(fn ($state) => Fields::rupiah($state))
-                    ->placeholder('No kurs yet')
+                    ->placeholder(__('No kurs yet'))
                     ->alignEnd(),
                 TextColumn::make('status')->badge(),
                 TextColumn::make('paidBy.username')->label('Paid by')->placeholder('-'),

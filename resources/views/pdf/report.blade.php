@@ -24,7 +24,7 @@
 </head>
 <body>
     <h1>{{ $company }} · {{ $report->title }}</h1>
-    <div class="muted">{{ $report->subtitle }} · printed {{ now()->format('d/m/Y H:i') }}@if ($header) · {{ $header }}@endif</div>
+    <div class="muted">{{ $report->subtitle }} · {{ __('printed :date', ['date' => now()->format('d/m/Y H:i')]) }}@if ($header) · {{ $header }}@endif</div>
 
     <table>
         <thead>

@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\Employees;
 
+use App\Filament\Concerns\TranslatesResourceLabels;
 use App\Filament\Resources\Employees\Pages\ManageEmployees;
 use App\Filament\Support\Fields;
 use App\Models\Currency;
@@ -24,6 +25,8 @@ use UnitEnum;
 
 class EmployeeResource extends Resource
 {
+    use TranslatesResourceLabels;
+
     protected static ?string $model = Employee::class;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedIdentification;
@@ -41,7 +44,7 @@ class EmployeeResource extends Resource
         return $schema
             ->columns(2)
             ->components([
-                Section::make('Employee')
+                Section::make(__('Employee'))
                     ->columnSpanFull()
                     ->columns(3)
                     ->schema([
@@ -57,32 +60,28 @@ class EmployeeResource extends Resource
                             ->datalist(fn (): array => Employee::query()->distinct()->whereNotNull('position')->pluck('position')->all()),
                         DatePicker::make('join_date')
                             ->label('Join date')
-                            ->helperText('LAMA KERJA is calculated from this.'),
+                            ->helperText(__('LAMA KERJA is calculated from this.')),
                         Select::make('user_id')
                             ->label('Login user')
                             ->relationship('user', 'username')
                             ->searchable()
                             ->preload()
-                            ->placeholder('None'),
+                            ->placeholder(__('None')),
                     ]),
-                Section::make('Pay')
+                Section::make(__('Pay'))
                     ->columnSpanFull()
                     ->columns(4)
                     ->schema([
-                        TextInput::make('salary_amount')
+                        Fields::money('salary_amount')
                             ->label('Gaji')
-                            ->numeric()
-                            ->minValue(0)
                             ->default(0)
                             ->required(),
                         Fields::activeRelation('salary_currency_id', 'salaryCurrency', 'code')
                             ->label('Gaji currency')
                             ->default($baseCurrency)
                             ->required(),
-                        TextInput::make('um_amount')
+                        Fields::money('um_amount')
                             ->label('UM full')
-                            ->numeric()
-                            ->minValue(0)
                             ->default(0)
                             ->required(),
                         Fields::activeRelation('um_currency_id', 'umCurrency', 'code')
@@ -90,7 +89,7 @@ class EmployeeResource extends Resource
                             ->default($baseCurrency)
                             ->required(),
                     ]),
-                Section::make('Bank')
+                Section::make(__('Bank'))
                     ->columnSpanFull()
                     ->columns(3)
                     ->schema([

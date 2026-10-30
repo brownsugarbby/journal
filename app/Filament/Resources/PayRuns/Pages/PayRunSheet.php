@@ -4,7 +4,9 @@ namespace App\Filament\Resources\PayRuns\Pages;
 
 use App\Enums\PayColumnKind;
 use App\Enums\PayType;
+use App\Filament\Concerns\TranslatesPageLabels;
 use App\Filament\Resources\PayRuns\PayRunResource;
+use App\Filament\Support\MoneyInputColumn;
 use App\Models\CompanyAccount;
 use App\Models\Currency;
 use App\Models\PayColumn;
@@ -45,6 +47,7 @@ class PayRunSheet extends Page implements HasTable
 {
     use InteractsWithRecord;
     use InteractsWithTable;
+    use TranslatesPageLabels;
 
     protected static string $resource = PayRunResource::class;
 
@@ -60,8 +63,8 @@ class PayRunSheet extends Page implements HasTable
 
     public function getSubheading(): string|Htmlable|null
     {
-        return 'Pay date '.$this->record->pay_date->format('d/m/Y').' · '.$this->record->status->getLabel()
-            .($this->record->isPaid() ? ' by '.$this->record->paidBy?->username.' on '.$this->record->paid_at?->format('d/m/Y H:i') : '');
+        return __('Pay date :date', ['date' => $this->record->pay_date->format('d/m/Y')]).' · '.$this->record->status->getLabel()
+            .($this->record->isPaid() ? ' '.__('by :user on :date', ['user' => $this->record->paidBy?->username, 'date' => $this->record->paid_at?->format('d/m/Y H:i')]) : '');
     }
 
     public function content(Schema $schema): Schema
@@ -113,7 +116,7 @@ class PayRunSheet extends Page implements HasTable
                 ->action(function (): void {
                     $added = $this->payroll()->syncEmployees($this->record);
                     $this->refreshTotals();
-                    Notification::make()->title($added ? "{$added} employee(s) added" : 'Everyone is already on the sheet')->success()->send();
+                    Notification::make()->title($added ? __(':count employee(s) added', ['count' => $added]) : __('Everyone is already on the sheet'))->success()->send();
                 }),
             $this->payAction(),
             Action::make('unpay')
@@ -122,12 +125,12 @@ class PayRunSheet extends Page implements HasTable
                 ->color('danger')
                 ->visible(fn (): bool => $this->isLocked())
                 ->requiresConfirmation()
-                ->modalDescription('Voids the payment journals (balances come back) and reopens the sheet for editing.')
+                ->modalDescription(__('Voids the payment journals (balances come back) and reopens the sheet for editing.'))
                 ->schema([TextInput::make('reason')->required()->maxLength(255)])
                 ->action(function (array $data): void {
                     $this->payroll()->unpay($this->record, $data['reason'], $this->user());
                     $this->refreshTotals();
-                    Notification::make()->title('Payment voided, sheet reopened')->success()->send();
+                    Notification::make()->title(__('Payment voided, sheet reopened'))->success()->send();
                 }),
             Action::make('recapPdf')
                 ->label('Recap PDF')
@@ -150,8 +153,8 @@ class PayRunSheet extends Page implements HasTable
             ->label('Pay')
             ->icon(Heroicon::OutlinedCheckBadge)
             ->visible(fn (): bool => ! $this->isLocked())
-            ->modalHeading(fn (): string => 'Pay '.$this->record->label())
-            ->modalDescription('Posts one journal per currency. Baht and dollars are valued at the paying account\'s average kurs.')
+            ->modalHeading(fn (): string => __('Pay :run', ['run' => $this->record->label()]))
+            ->modalDescription(__('Posts one journal per currency. Baht and dollars are valued at the paying account\'s average kurs.'))
             ->fillForm(fn (): array => [
                 'pay_date' => $this->record->pay_date->isFuture() ? today()->toDateString() : $this->record->pay_date->toDateString(),
                 'accounts' => collect($currencies())->mapWithKeys(fn (int $id): array => [
@@ -165,14 +168,14 @@ class PayRunSheet extends Page implements HasTable
                     $needed = $this->payroll()->totals($this->record)['currencies'][$currencyId]['sisa'] ?? '0';
 
                     return Select::make("accounts.{$currencyId}")
-                        ->label("Pay {$currency->code} from")
+                        ->label(__('Pay :currency from', ['currency' => $currency->code]))
                         ->options(CompanyAccount::query()->where('is_active', true)->where('currency_id', $currencyId)->orderBy('tier')->orderBy('label')->pluck('label', 'id'))
                         ->native()
                         ->required()
                         ->live()
                         ->helperText(function ($state) use ($currency, $needed): string {
                             $account = CompanyAccount::query()->find($state);
-                            $text = "Needed {$currency->code} ".number_format((float) $needed, $currency->decimals, ',', '.');
+                            $text = __('Needed :currency', ['currency' => $currency->code]).' '.number_format((float) $needed, $currency->decimals, ',', '.');
 
                             if (! $account) {
                                 return $text;
@@ -183,7 +186,7 @@ class PayRunSheet extends Page implements HasTable
 
                             if (! $currency->is_base) {
                                 $kurs = $account->averageKurs();
-                                $text .= ' · kurs '.($kurs ? rtrim(rtrim(number_format((float) $kurs, 4, ',', '.'), '0'), ',') : 'none yet');
+                                $text .= ' · kurs '.($kurs ? rtrim(rtrim(number_format((float) $kurs, 4, ',', '.'), '0'), ',') : __('none yet'));
                             }
 
                             return $text.(bccomp($balance, (string) $needed, 2) < 0 ? ' · NOT ENOUGH' : '');
@@ -194,12 +197,12 @@ class PayRunSheet extends Page implements HasTable
                 try {
                     $this->payroll()->pay($this->record, $data['accounts'] ?? [], $this->user(), $data['pay_date']);
                 } catch (ValidationException $exception) {
-                    Notification::make()->title('Not paid')->body(collect($exception->errors())->flatten()->join(' '))->danger()->persistent()->send();
+                    Notification::make()->title(__('Not paid'))->body(collect($exception->errors())->flatten()->join(' '))->danger()->persistent()->send();
                     $action->halt();
                 }
 
                 $this->refreshTotals();
-                Notification::make()->title($this->record->label().' paid')->success()->send();
+                Notification::make()->title(__(':run paid', ['run' => $this->record->label()]))->success()->send();
             });
     }
 
@@ -228,7 +231,7 @@ class PayRunSheet extends Page implements HasTable
                 $this->amountCell('gross', $isGaji ? 'Gaji' : 'UM full'),
                 $this->amountCell('potong', 'Potong'),
                 $this->amountCell('loan_repayment', 'Pinjaman')
-                    ->tooltip('Loan repayment deducted from pay (needs a Loan Counterparty linked to the employee)'),
+                    ->tooltip(__('Loan repayment deducted from pay (needs a Loan Counterparty linked to the employee)')),
                 TextColumn::make('sisa')
                     ->label($isGaji ? 'Sisa' : 'Sisa UM')
                     ->state(fn (PayItem $record): string => $record->sisa())
@@ -254,7 +257,7 @@ class PayRunSheet extends Page implements HasTable
                     ->icon(Heroicon::OutlinedXMark)
                     ->iconButton()
                     ->color('danger')
-                    ->tooltip('Remove from this sheet')
+                    ->tooltip(__('Remove from this sheet'))
                     ->visible(fn (): bool => ! $this->isLocked())
                     ->requiresConfirmation()
                     ->action(function (PayItem $record): void {
@@ -264,20 +267,17 @@ class PayRunSheet extends Page implements HasTable
             ])
             ->defaultSort('id')
             ->paginated(false)
-            ->emptyStateHeading('No employees on this sheet')
-            ->emptyStateDescription('Add employees with a Gaji / UM amount on People → Employees, then use "Add new employees".');
+            ->emptyStateHeading(__('No employees on this sheet'))
+            ->emptyStateDescription(__('Add employees with a Gaji / UM amount on People → Employees, then use "Add new employees".'));
     }
 
     protected function amountCell(string $name, string $label): TextInputColumn
     {
-        return TextInputColumn::make($name)
+        return MoneyInputColumn::make($name)
             ->label($label)
-            ->type('number')
-            ->step('any')
             ->rules(['required', 'numeric', 'min:0'])
             ->disabled(fn (): bool => $this->isLocked())
-            ->afterStateUpdated(fn () => $this->refreshTotals())
-            ->extraInputAttributes(['style' => 'min-width: 7.5rem; text-align: right']);
+            ->afterStateUpdated(fn () => $this->refreshTotals());
     }
 
     /**
@@ -292,10 +292,9 @@ class PayRunSheet extends Page implements HasTable
             ->where('is_active', true)
             ->orderBy('sort_order')
             ->get()
-            ->map(fn (PayColumn $column): TextInputColumn => TextInputColumn::make("col_{$column->id}")
+            ->map(fn (PayColumn $column): TextInputColumn => ($column->kind === PayColumnKind::Info ? TextInputColumn::make("col_{$column->id}") : MoneyInputColumn::make("col_{$column->id}"))
                 ->label($column->name)
                 ->tooltip($column->kind->getLabel())
-                ->type($column->kind === PayColumnKind::Info ? 'text' : 'number')
                 ->rules($column->kind === PayColumnKind::Info ? ['nullable', 'max:255'] : ['nullable', 'numeric', 'min:0'])
                 ->state(function (PayItem $record) use ($column): mixed {
                     $value = $record->valueFor($column);
@@ -308,8 +307,7 @@ class PayRunSheet extends Page implements HasTable
 
                     return $state;
                 })
-                ->disabled(fn (): bool => $this->isLocked())
-                ->extraInputAttributes(['style' => 'min-width: 6.5rem']))
+                ->disabled(fn (): bool => $this->isLocked()))
             ->all();
     }
 

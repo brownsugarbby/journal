@@ -13,8 +13,8 @@ enum BonusKind: string implements HasColor, HasLabel
     public function getLabel(): string
     {
         return match ($this) {
-            self::Bonus => 'Bonus',
-            self::Cashback => 'Cashback',
+            self::Bonus => __('Bonus'),
+            self::Cashback => __('Cashback'),
         };
     }
 

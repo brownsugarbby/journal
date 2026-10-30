@@ -21,9 +21,9 @@
 <body>
     <h1>{{ $company }} · {{ strtoupper($run->label()) }}</h1>
     <div class="muted">
-        Pay date {{ $run->pay_date->format('d/m/Y') }} · {{ $run->status->getLabel() }}
-        @if ($run->isPaid()) by {{ $run->paidBy?->username }} @endif
-        · printed {{ now()->format('d/m/Y H:i') }}
+        {{ __('Pay date :date', ['date' => $run->pay_date->format('d/m/Y')]) }} · {{ $run->status->getLabel() }}
+        @if ($run->isPaid()) {{ __('by :user', ['user' => $run->paidBy?->username]) }} @endif
+        · {{ __('printed :date', ['date' => now()->format('d/m/Y H:i')]) }}
     </div>
 
     <table>

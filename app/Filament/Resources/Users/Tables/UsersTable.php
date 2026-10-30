@@ -43,7 +43,7 @@ class UsersTable
                 TextColumn::make('last_login_at')
                     ->dateTime('d M Y H:i')
                     ->sortable()
-                    ->placeholder('Never'),
+                    ->placeholder(__('Never')),
                 TextColumn::make('created_at')
                     ->dateTime('d M Y H:i')
                     ->sortable()

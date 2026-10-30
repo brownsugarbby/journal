@@ -16,11 +16,11 @@ enum AccountPurpose: string implements HasColor, HasLabel
     public function getLabel(): string
     {
         return match ($this) {
-            self::Deposit => 'DP',
-            self::Withdraw => 'WD',
-            self::DepositWithdraw => 'DP + WD',
-            self::Central => 'Central',
-            self::Cash => 'Cash',
+            self::Deposit => __('DP'),
+            self::Withdraw => __('WD'),
+            self::DepositWithdraw => __('DP + WD'),
+            self::Central => __('Central'),
+            self::Cash => __('Cash'),
         };
     }
 

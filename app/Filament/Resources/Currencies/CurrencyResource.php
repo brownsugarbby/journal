@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\Currencies;
 
+use App\Filament\Concerns\TranslatesResourceLabels;
 use App\Filament\Resources\Currencies\Pages\ManageCurrencies;
 use App\Filament\Support\Fields;
 use App\Models\Currency;
@@ -19,6 +20,8 @@ use UnitEnum;
 
 class CurrencyResource extends Resource
 {
+    use TranslatesResourceLabels;
+
     protected static ?string $model = Currency::class;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedCurrencyDollar;
@@ -38,7 +41,7 @@ class CurrencyResource extends Resource
                     ->length(3)
                     ->unique(ignoreRecord: true)
                     ->dehydrateStateUsing(fn (string $state): string => strtoupper($state))
-                    ->helperText('ISO code: IDR, USD, THB.'),
+                    ->helperText(__('ISO code: IDR, USD, THB.')),
                 TextInput::make('name')
                     ->required()
                     ->maxLength(255),

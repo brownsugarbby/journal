@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\Partners;
 
+use App\Filament\Concerns\TranslatesResourceLabels;
 use App\Filament\Resources\Partners\Pages\ManagePartners;
 use App\Filament\Support\Fields;
 use App\Models\Currency;
@@ -19,6 +20,8 @@ use UnitEnum;
 
 class PartnerResource extends Resource
 {
+    use TranslatesResourceLabels;
+
     protected static ?string $model = Partner::class;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedUserCircle;
@@ -45,8 +48,7 @@ class PartnerResource extends Resource
                 Fields::activeRelation('currency_id', 'currency', 'code')
                     ->default(fn () => Currency::query()->where('is_base', true)->value('id'))
                     ->required(),
-                TextInput::make('opening_balance')
-                    ->numeric()
+                Fields::money('opening_balance', allowNegative: true)
                     ->default(0)
                     ->required(),
                 Textarea::make('notes')

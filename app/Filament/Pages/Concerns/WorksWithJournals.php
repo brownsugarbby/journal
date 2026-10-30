@@ -52,16 +52,16 @@ trait WorksWithJournals
             ->icon(Heroicon::OutlinedNoSymbol)
             ->iconButton()
             ->color('danger')
-            ->tooltip('Void (posts a reversal)')
+            ->tooltip(__('Void (posts a reversal)'))
             ->visible(fn (Model $record): bool => $this->user()->can('void', $journalOf($record)))
             ->requiresConfirmation()
-            ->modalHeading(fn (Model $record): string => 'Void '.$journalOf($record)->number.'?')
-            ->modalDescription('The entry stays in the ledger marked VOID, and a reversal row brings the balance back.')
+            ->modalHeading(fn (Model $record): string => __('Void :number?', ['number' => $journalOf($record)->number]))
+            ->modalDescription(__('The entry stays in the ledger marked VOID, and a reversal row brings the balance back.'))
             ->schema([TextInput::make('reason')->label('Reason')->required()->maxLength(255)])
             ->action(function (array $data, Model $record) use ($journalOf): void {
                 app(JournalService::class)->void($journalOf($record), $data['reason'], $this->user());
                 $this->refreshSheets();
-                Notification::make()->title('Entry voided')->success()->send();
+                Notification::make()->title(__('Entry voided'))->success()->send();
             });
     }
 

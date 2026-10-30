@@ -3,6 +3,7 @@
 namespace App\Filament\Pages;
 
 use App\Enums\AccountKind;
+use App\Filament\Concerns\TranslatesPageLabels;
 use App\Filament\Support\Fields;
 use App\Models\BalanceCheck;
 use App\Models\CompanyAccount;
@@ -29,6 +30,7 @@ use UnitEnum;
 class SaldoDpWd extends Page implements HasTable
 {
     use InteractsWithTable;
+    use TranslatesPageLabels;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedBanknotes;
 
@@ -103,7 +105,7 @@ class SaldoDpWd extends Page implements HasTable
             ->columns([
                 TextColumn::make('label')->label('Nama rekening')->weight('bold')->searchable(),
                 TextColumn::make('provider')->state(fn (CompanyAccount $record): string => $record->providerName()),
-                TextColumn::make('brand.code')->label('Brand')->badge()->placeholder('All'),
+                TextColumn::make('brand.code')->label('Brand')->badge()->placeholder(__('All')),
                 TextColumn::make('balance')
                     ->label('Jumlah')
                     ->state(fn (CompanyAccount $record): string => $this->balanceOf($record))
@@ -114,18 +116,18 @@ class SaldoDpWd extends Page implements HasTable
                 TextColumn::make('max_balance')
                     ->label('Max')
                     ->formatStateUsing(fn ($state) => Fields::rupiah($state))
-                    ->placeholder('No limit')
+                    ->placeholder(__('No limit'))
                     ->alignEnd(),
                 TextColumn::make('over')
                     ->label('')
-                    ->state(fn (CompanyAccount $record): ?string => $record->isOverMax($this->balanceOf($record)) ? 'Over max' : null)
+                    ->state(fn (CompanyAccount $record): ?string => $record->isOverMax($this->balanceOf($record)) ? __('Over max') : null)
                     ->badge()
                     ->color('danger'),
                 TextColumn::make('last_difference')
                     ->label('Cek saldo')
-                    ->formatStateUsing(fn ($state): string => (float) $state === 0.0 ? 'Match' : 'Selisih '.Fields::rupiah($state))
+                    ->formatStateUsing(fn ($state): string => (float) $state === 0.0 ? __('Match') : __('Selisih :amount', ['amount' => Fields::rupiah($state)]))
                     ->color(fn ($state): string => (float) $state === 0.0 ? 'success' : 'danger')
-                    ->placeholder('Never'),
+                    ->placeholder(__('Never')),
             ])
             ->defaultGroup(Group::make('kind')->label('')->titlePrefixedWithLabel(false))
             ->recordUrl(fn (CompanyAccount $record): string => Jurnal::getUrl(['tab' => "acc-{$record->id}"]))

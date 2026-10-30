@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\Companies;
 
+use App\Filament\Concerns\TranslatesResourceLabels;
 use App\Filament\Resources\Companies\Pages\ManageCompanies;
 use App\Filament\Support\Fields;
 use App\Models\Company;
@@ -17,6 +18,8 @@ use UnitEnum;
 
 class CompanyResource extends Resource
 {
+    use TranslatesResourceLabels;
+
     protected static ?string $model = Company::class;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedBuildingOffice2;
@@ -41,7 +44,7 @@ class CompanyResource extends Resource
                     ->maxLength(20)
                     ->unique(ignoreRecord: true)
                     ->dehydrateStateUsing(fn (string $state): string => strtoupper($state))
-                    ->helperText('As written in the PT column, e.g. CVC.'),
+                    ->helperText(__('As written in the PT column, e.g. CVC.')),
                 TextInput::make('name')
                     ->required()
                     ->maxLength(255),

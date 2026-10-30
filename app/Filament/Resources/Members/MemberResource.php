@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\Members;
 
+use App\Filament\Concerns\TranslatesResourceLabels;
 use App\Filament\Resources\Members\Pages\ManageMembers;
 use App\Filament\Support\Fields;
 use App\Models\Member;
@@ -22,6 +23,8 @@ use UnitEnum;
  */
 class MemberResource extends Resource
 {
+    use TranslatesResourceLabels;
+
     protected static ?string $model = Member::class;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedUserGroup;

@@ -3,6 +3,7 @@
 namespace App\Filament\Pages\Reports;
 
 use App\Enums\JournalType;
+use App\Filament\Concerns\TranslatesPageLabels;
 use App\Filament\Pages\Reports\Concerns\IsReportPage;
 use App\Models\Category;
 use App\Models\Journal;
@@ -25,6 +26,7 @@ use UnitEnum;
 class LaporanPengeluaran extends Page implements HasTable
 {
     use IsReportPage;
+    use TranslatesPageLabels;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedReceiptPercent;
 
@@ -51,11 +53,11 @@ class LaporanPengeluaran extends Page implements HasTable
     {
         return [
             $this->monthField(),
-            $this->brandField('All (incl. shared)'),
+            $this->brandField(__('All (incl. shared)')),
             Select::make('category')
                 ->label('Kategori')
                 ->options(Category::query()->where('source', 'manual')->where('type', 'expense')->orderBy('sort_order')->pluck('name', 'id')->all())
-                ->placeholder('All categories')
+                ->placeholder(__('All categories'))
                 ->native()
                 ->live(),
         ];

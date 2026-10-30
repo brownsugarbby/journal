@@ -20,7 +20,7 @@ class UserForm
     {
         return $schema
             ->components([
-                Section::make('Account')
+                Section::make(__('Account'))
                     ->columns(2)
                     ->schema([
                         TextInput::make('name')
@@ -32,13 +32,13 @@ class UserForm
                             ->maxLength(50)
                             ->unique(ignoreRecord: true)
                             ->dehydrateStateUsing(fn (string $state): string => strtolower($state))
-                            ->helperText('Used to log in. Letters, numbers, dot, dash and underscore.'),
+                            ->helperText(__('Used to log in. Letters, numbers, dot, dash and underscore.')),
                         TextInput::make('email')
                             ->email()
                             ->maxLength(255)
                             ->unique(ignoreRecord: true),
                     ]),
-                Section::make('Access')
+                Section::make(__('Access'))
                     ->columns(2)
                     ->schema([
                         Select::make('role')
@@ -57,7 +57,7 @@ class UserForm
                             ->label('Active')
                             ->default(true)
                             ->inline(false)
-                            ->helperText('Inactive users cannot log in. Users are never deleted.')
+                            ->helperText(__('Inactive users cannot log in. Users are never deleted.'))
                             ->disabled(fn (?User $record): bool => $record?->is(auth()->user()) ?? false),
                         TextInput::make('password')
                             ->password()
@@ -66,11 +66,11 @@ class UserForm
                             ->required(fn (string $operation): bool => $operation === 'create')
                             ->dehydrated(fn (?string $state): bool => filled($state))
                             ->helperText(fn (string $operation): ?string => $operation === 'edit'
-                                ? 'Leave blank to keep the current password.'
+                                ? __('Leave blank to keep the current password.')
                                 : null),
                     ]),
-                Section::make('Scope')
-                    ->description('Which brands and operational accounts this user may post on. Superadmins always see everything. Staff CS only enter DP and WD.')
+                Section::make(__('Scope'))
+                    ->description(__('Which brands and operational accounts this user may post on. Superadmins always see everything. Staff CS only enter DP and WD.'))
                     ->columns(2)
                     ->visible(fn (Get $get): bool => Role::fromState($get('role'))?->isScoped() ?? false)
                     ->schema([

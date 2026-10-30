@@ -36,8 +36,8 @@ class AccountAlerts extends TableWidget
             ])
             ->recordUrl(fn (array $record): ?string => $record['url'])
             ->paginated(false)
-            ->emptyStateHeading('Semua rekening aman')
-            ->emptyStateDescription('No account is over its max balance or has a Cek Saldo selisih.')
+            ->emptyStateHeading(__('Semua rekening aman'))
+            ->emptyStateDescription(__('No account is over its max balance or has a Cek Saldo selisih.'))
             ->emptyStateIcon('heroicon-o-check-circle');
     }
 

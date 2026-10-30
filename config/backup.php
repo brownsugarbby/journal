@@ -233,10 +233,11 @@ return [
         'notifiable' => Notifiable::class,
 
         'mail' => [
-            'to' => env('BACKUP_NOTIFY_EMAIL', 'admin@example.com'),
+            // `?:` so an empty value in .env doesn't stop artisan from booting.
+            'to' => env('BACKUP_NOTIFY_EMAIL') ?: 'admin@example.com',
 
             'from' => [
-                'address' => env('MAIL_FROM_ADDRESS', 'hello@example.com'),
+                'address' => env('MAIL_FROM_ADDRESS') ?: 'hello@example.com',
                 'name' => env('MAIL_FROM_NAME', 'Example'),
             ],
         ],

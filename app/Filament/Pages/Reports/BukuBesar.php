@@ -2,6 +2,7 @@
 
 namespace App\Filament\Pages\Reports;
 
+use App\Filament\Concerns\TranslatesPageLabels;
 use App\Filament\Pages\Reports\Concerns\IsReportPage;
 use App\Models\CompanyAccount;
 use App\Models\JournalLine;
@@ -22,6 +23,7 @@ use UnitEnum;
 class BukuBesar extends Page implements HasTable
 {
     use IsReportPage;
+    use TranslatesPageLabels;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedBookOpen;
 
@@ -77,7 +79,7 @@ class BukuBesar extends Page implements HasTable
         ];
 
         if (! $account) {
-            return new ReportTable('Buku Besar', 'Pick a rekening', $columns, []);
+            return new ReportTable('Buku Besar', __('Pick a rekening'), $columns, []);
         }
 
         $lines = JournalLine::query()
@@ -122,7 +124,7 @@ class BukuBesar extends Page implements HasTable
             subtitle: $start->translatedFormat('F Y').' · '.$account->providerName().' · '.$account->currency->code,
             columns: $columns,
             rows: $rows,
-            notes: ['Entries in date order. A voided entry and its reversal both appear and cancel out.'],
+            notes: [__('Entries in date order. A voided entry and its reversal both appear and cancel out.')],
         );
     }
 }

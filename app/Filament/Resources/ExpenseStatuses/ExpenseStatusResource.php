@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\ExpenseStatuses;
 
+use App\Filament\Concerns\TranslatesResourceLabels;
 use App\Filament\Resources\ExpenseStatuses\Pages\ManageExpenseStatuses;
 use App\Filament\Support\Fields;
 use App\Models\ExpenseStatus;
@@ -18,6 +19,8 @@ use UnitEnum;
 
 class ExpenseStatusResource extends Resource
 {
+    use TranslatesResourceLabels;
+
     protected static ?string $model = ExpenseStatus::class;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedCheckBadge;

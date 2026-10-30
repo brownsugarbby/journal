@@ -41,7 +41,7 @@ class PayrollService
         $this->authorize($user);
 
         if (PayRun::query()->where(['pay_type' => $type, 'year' => $year, 'month' => $month])->exists()) {
-            throw ValidationException::withMessages(['month' => "{$type->getLabel()} for this month already exists."]);
+            throw ValidationException::withMessages(['month' => __(':type for this month already exists.', ['type' => $type->getLabel()])]);
         }
 
         return DB::transaction(function () use ($type, $year, $month, $payDate, $user): PayRun {
@@ -173,13 +173,13 @@ class PayrollService
         $items = $this->items($run)->filter(fn (PayItem $item): bool => bccomp($item->cost(), '0', 2) !== 0 || bccomp((string) $item->loan_repayment, '0', 2) !== 0);
 
         if ($items->isEmpty()) {
-            throw ValidationException::withMessages(['accounts' => 'Nothing to pay on this sheet.']);
+            throw ValidationException::withMessages(['accounts' => __('Nothing to pay on this sheet.')]);
         }
 
         $date = $payDate ?? $run->pay_date->toDateString();
 
         if (Carbon::parse($date)->isFuture()) {
-            throw ValidationException::withMessages(['pay_date' => 'Pay date cannot be in the future.']);
+            throw ValidationException::withMessages(['pay_date' => __('Pay date cannot be in the future.')]);
         }
 
         return DB::transaction(function () use ($run, $accounts, $user, $items, $date): PayRun {
@@ -190,13 +190,13 @@ class PayrollService
                 $code = $group->first()->currency->code;
 
                 if (! $account || $account->currency_id !== (int) $currencyId) {
-                    throw ValidationException::withMessages(["accounts.{$currencyId}" => "Pick a {$code} account to pay from."]);
+                    throw ValidationException::withMessages(["accounts.{$currencyId}" => __('Pick a :currency account to pay from.', ['currency' => $code])]);
                 }
 
                 $rate = $account->averageKurs();
 
                 if ($rate === null) {
-                    throw ValidationException::withMessages(["accounts.{$currencyId}" => "{$account->label} has no kurs yet: buy {$code} first."]);
+                    throw ValidationException::withMessages(["accounts.{$currencyId}" => __(':account has no kurs yet: buy :currency first.', ['account' => $account->label, 'currency' => $code])]);
                 }
 
                 $this->journals->postPrepared(JournalType::Payroll, [
@@ -231,7 +231,7 @@ class PayrollService
         $this->authorize($user);
 
         if (! $run->isPaid()) {
-            throw ValidationException::withMessages(['reason' => 'This sheet is not paid.']);
+            throw ValidationException::withMessages(['reason' => __('This sheet is not paid.')]);
         }
 
         return DB::transaction(function () use ($run, $reason, $user): PayRun {
@@ -282,7 +282,7 @@ class PayrollService
                 $counterparty = LoanCounterparty::query()->where('employee_id', $item->employee_id)->first();
 
                 if (! $counterparty) {
-                    throw ValidationException::withMessages(['accounts' => "{$item->employee->name} has a loan repayment but no loan counterparty."]);
+                    throw ValidationException::withMessages(['accounts' => __(':employee has a loan repayment but no loan counterparty.', ['employee' => $item->employee->name])]);
                 }
 
                 $repaid = $idr((string) $item->loan_repayment);
@@ -326,14 +326,14 @@ class PayrollService
     private function ensureDraft(PayRun $run): void
     {
         if ($run->isPaid()) {
-            throw ValidationException::withMessages(['status' => 'This sheet is paid. Unpay it first to change it.']);
+            throw ValidationException::withMessages(['status' => __('This sheet is paid. Unpay it first to change it.')]);
         }
     }
 
     private function authorize(User $user): void
     {
         if (! $user->hasFullAccess()) {
-            throw ValidationException::withMessages(['status' => 'Only a superadmin or leader can run payroll.']);
+            throw ValidationException::withMessages(['status' => __('Only a superadmin or leader can run payroll.')]);
         }
     }
 
@@ -342,7 +342,7 @@ class PayrollService
         $normalized = is_string($value) ? trim($value) : $value;
 
         if (! is_numeric($normalized) || $normalized < 0) {
-            throw ValidationException::withMessages([$field => 'Must be 0 or more.']);
+            throw ValidationException::withMessages([$field => __('Must be 0 or more.')]);
         }
 
         return number_format((float) $normalized, 2, '.', '');

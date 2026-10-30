@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\LoanCounterparties;
 
 use App\Enums\LoanCounterpartyType;
+use App\Filament\Concerns\TranslatesResourceLabels;
 use App\Filament\Resources\CompanyAccounts\CompanyAccountResource;
 use App\Filament\Resources\LoanCounterparties\Pages\ManageLoanCounterparties;
 use App\Filament\Support\Fields;
@@ -23,6 +24,8 @@ use UnitEnum;
 
 class LoanCounterpartyResource extends Resource
 {
+    use TranslatesResourceLabels;
+
     protected static ?string $model = LoanCounterparty::class;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedScale;
@@ -49,23 +52,22 @@ class LoanCounterpartyResource extends Resource
                     ->live(),
                 Fields::activeRelation('employee_id', 'employee', 'name')
                     ->label('Employee')
-                    ->helperText('Lets repayments be deducted in payroll later.')
+                    ->helperText(__('Lets repayments be deducted in payroll later.'))
                     ->visible(fn (Get $get): bool => CompanyAccountResource::is($get('type'), LoanCounterpartyType::Employee)),
                 Fields::activeRelation('partner_id', 'partner', 'name')
                     ->label('Partner')
                     ->visible(fn (Get $get): bool => CompanyAccountResource::is($get('type'), LoanCounterpartyType::Partner)),
-                TextInput::make('opening_balance')
+                Fields::money('opening_balance', allowNegative: true)
                     ->label('Opening balance (Rp)')
-                    ->numeric()
                     ->default(0)
                     ->required()
-                    ->helperText('Outstanding at go-live: positive = they owe us, negative = we owe them.'),
+                    ->helperText(__('Outstanding at go-live: positive = they owe us, negative = we owe them.')),
                 TextInput::make('interest_rate')
                     ->label('Interest (Bunga)')
                     ->numeric()
                     ->minValue(0)
                     ->maxValue(100)
-                    ->suffix('% / month'),
+                    ->suffix(__('% / month')),
                 Textarea::make('notes')
                     ->rows(2),
                 Fields::activeToggle(),

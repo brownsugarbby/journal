@@ -6,6 +6,7 @@ use App\Enums\AccountKind;
 use App\Enums\AccountPurpose;
 use App\Enums\AccountTier;
 use App\Enums\FeeType;
+use App\Filament\Concerns\TranslatesResourceLabels;
 use App\Filament\Resources\CompanyAccounts\Pages\ManageCompanyAccounts;
 use App\Filament\Resources\PaymentGateways\PaymentGatewayResource;
 use App\Filament\Support\Fields;
@@ -32,6 +33,8 @@ use UnitEnum;
 
 class CompanyAccountResource extends Resource
 {
+    use TranslatesResourceLabels;
+
     protected static ?string $model = CompanyAccount::class;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedWallet;
@@ -47,7 +50,7 @@ class CompanyAccountResource extends Resource
         return $schema
             ->columns(2)
             ->components([
-                Section::make('Where the money is')
+                Section::make(__('Where the money is'))
                     ->columnSpanFull()
                     ->columns(3)
                     ->schema([
@@ -71,7 +74,7 @@ class CompanyAccountResource extends Resource
                             ->required()
                             ->maxLength(255)
                             ->unique(ignoreRecord: true)
-                            ->helperText('Name shown everywhere, e.g. "BCA DP/WD", "HOKI KES", "FLIPTECH".'),
+                            ->helperText(__('Name shown everywhere, e.g. "BCA DP/WD", "HOKI KES", "FLIPTECH".')),
                         TextInput::make('account_name')
                             ->label('Account name')
                             ->maxLength(255),
@@ -81,9 +84,9 @@ class CompanyAccountResource extends Resource
                         TextInput::make('holder')
                             ->label('Holder (HP)')
                             ->maxLength(255)
-                            ->helperText('Who holds the phone / app, e.g. FUNG, KO HD.'),
+                            ->helperText(__('Who holds the phone / app, e.g. FUNG, KO HD.')),
                     ]),
-                Section::make('Use')
+                Section::make(__('Use'))
                     ->columnSpanFull()
                     ->columns(3)
                     ->schema([
@@ -99,26 +102,23 @@ class CompanyAccountResource extends Resource
                             ->required(),
                         Fields::activeRelation('brand_id', 'brand', 'code')
                             ->label('Brand')
-                            ->placeholder('All brands (shared)')
+                            ->placeholder(__('All brands (shared)'))
                             ->visible(fn (Get $get): bool => static::is($get('tier'), AccountTier::Operational)),
                         Fields::activeRelation('company_id', 'company', 'short_code')
                             ->label('PT')
-                            ->placeholder('None'),
-                        TextInput::make('opening_balance')
-                            ->numeric()
+                            ->placeholder(__('None')),
+                        Fields::money('opening_balance', allowNegative: true)
                             ->default(0)
                             ->required()
-                            ->helperText('Balance at go-live; the ledger adds entries on top of it.'),
+                            ->helperText(__('Balance at go-live; the ledger adds entries on top of it.')),
                         DatePicker::make('opening_date')
                             ->default(now()->startOfMonth()),
-                        TextInput::make('max_balance')
-                            ->numeric()
-                            ->minValue(0)
+                        Fields::money('max_balance')
                             ->default(fn (): int => static::defaultMaxBalance(AccountTier::Operational))
-                            ->helperText('Alert when the book balance goes above this. Empty = no limit.'),
+                            ->helperText(__('Alert when the book balance goes above this. Empty = no limit.')),
                     ]),
-                Section::make('Fee override')
-                    ->description(fn (Get $get): string => 'Leave empty to use the PGA default fees.')
+                Section::make(__('Fee override'))
+                    ->description(fn (Get $get): string => __('Leave empty to use the PGA default fees.'))
                     ->columnSpanFull()
                     ->columns(4)
                     ->collapsed()
@@ -160,7 +160,7 @@ class CompanyAccountResource extends Resource
                 TextColumn::make('provider')
                     ->state(fn (CompanyAccount $record): string => $record->providerName()),
                 TextColumn::make('tier')->badge()->sortable(),
-                TextColumn::make('brand.code')->label('Brand')->badge()->placeholder('All'),
+                TextColumn::make('brand.code')->label('Brand')->badge()->placeholder(__('All')),
                 TextColumn::make('account_number')->label('No. rek')->searchable()->placeholder('-')->toggleable(),
                 TextColumn::make('holder')->label('HP')->placeholder('-')->toggleable(),
                 TextColumn::make('opening_balance')
@@ -170,7 +170,7 @@ class CompanyAccountResource extends Resource
                 TextColumn::make('max_balance')
                     ->label('Max')
                     ->money(fn (CompanyAccount $record): string => $record->currency->code, locale: 'id')
-                    ->placeholder('No limit')
+                    ->placeholder(__('No limit'))
                     ->alignEnd(),
                 Fields::activeColumn(),
             ])

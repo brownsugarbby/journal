@@ -2,6 +2,8 @@
 
 namespace App\Filament\Pages;
 
+use App\Filament\Concerns\TranslatesPageLabels;
+use App\Filament\Support\Fields;
 use App\Support\AppSettings;
 use BackedEnum;
 use Filament\Actions\Action;
@@ -23,6 +25,8 @@ use UnitEnum;
  */
 class AppSettingsPage extends Page
 {
+    use TranslatesPageLabels;
+
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedCog6Tooth;
 
     protected static string|UnitEnum|null $navigationGroup = 'Settings';
@@ -55,7 +59,7 @@ class AppSettingsPage extends Page
         return $schema
             ->statePath('data')
             ->components([
-                Section::make('Company')
+                Section::make(__('Company'))
                     ->columns(2)
                     ->schema([
                         TextInput::make('company_name')
@@ -71,30 +75,24 @@ class AppSettingsPage extends Page
                             ->rows(3)
                             ->columnSpanFull(),
                     ]),
-                Section::make('Journal rules')
+                Section::make(__('Journal rules'))
                     ->columns(3)
                     ->schema([
                         TextInput::make('staff_edit_window_minutes')
                             ->label('Staff edit window')
-                            ->helperText('Minutes an admin can still edit their own entry. 0 = no edits.')
+                            ->helperText(__('Minutes an admin can still edit their own entry. 0 = no edits.'))
                             ->numeric()
                             ->integer()
                             ->minValue(0)
                             ->maxValue(1440)
-                            ->suffix('min')
+                            ->suffix(__('min'))
                             ->required(),
-                        TextInput::make('default_max_balance_operational')
+                        Fields::money('default_max_balance_operational')
                             ->label('Default max balance: operational')
-                            ->numeric()
-                            ->integer()
-                            ->minValue(0)
                             ->prefix('Rp')
                             ->required(),
-                        TextInput::make('default_max_balance_pusat')
+                        Fields::money('default_max_balance_pusat')
                             ->label('Default max balance: pusat')
-                            ->numeric()
-                            ->integer()
-                            ->minValue(0)
                             ->prefix('Rp')
                             ->required(),
                     ]),
@@ -143,7 +141,7 @@ class AppSettingsPage extends Page
         }
 
         Notification::make()
-            ->title('Settings saved')
+            ->title(__('Settings saved'))
             ->success()
             ->send();
     }

@@ -13,8 +13,8 @@ enum PeriodStatus: string implements HasColor, HasLabel
     public function getLabel(): string
     {
         return match ($this) {
-            self::Open => 'Open',
-            self::Closed => 'Closed',
+            self::Open => __('Open'),
+            self::Closed => __('Closed'),
         };
     }
 

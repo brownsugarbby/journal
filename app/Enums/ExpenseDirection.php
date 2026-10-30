@@ -16,8 +16,8 @@ enum ExpenseDirection: string implements HasColor, HasLabel
     public function getLabel(): string
     {
         return match ($this) {
-            self::Keluar => 'Keluar',
-            self::Masuk => 'Masuk',
+            self::Keluar => __('Keluar'),
+            self::Masuk => __('Masuk'),
         };
     }
 

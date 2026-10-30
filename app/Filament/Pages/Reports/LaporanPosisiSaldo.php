@@ -2,6 +2,7 @@
 
 namespace App\Filament\Pages\Reports;
 
+use App\Filament\Concerns\TranslatesPageLabels;
 use App\Filament\Pages\Reports\Concerns\IsReportPage;
 use App\Models\CompanyAccount;
 use App\Models\JournalLine;
@@ -23,6 +24,7 @@ use UnitEnum;
 class LaporanPosisiSaldo extends Page implements HasTable
 {
     use IsReportPage;
+    use TranslatesPageLabels;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedChartPie;
 
@@ -115,7 +117,7 @@ class LaporanPosisiSaldo extends Page implements HasTable
                 ReportColumn::money('rp', 'Nilai Rp'),
             ],
             rows: $rows,
-            notes: ['THB / USD valued at the current average kurs of each account. Red saldo = above the account\'s max balance.'],
+            notes: [__('THB / USD valued at the current average kurs of each account. Red saldo = above the account\'s max balance.')],
         );
     }
 }

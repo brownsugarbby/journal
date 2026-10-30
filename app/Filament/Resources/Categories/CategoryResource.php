@@ -5,6 +5,7 @@ namespace App\Filament\Resources\Categories;
 use App\Enums\CategorySource;
 use App\Enums\CategoryType;
 use App\Enums\PlGroup;
+use App\Filament\Concerns\TranslatesResourceLabels;
 use App\Filament\Resources\Categories\Pages\ManageCategories;
 use App\Filament\Support\Fields;
 use App\Models\Category;
@@ -26,6 +27,8 @@ use UnitEnum;
 
 class CategoryResource extends Resource
 {
+    use TranslatesResourceLabels;
+
     protected static ?string $model = Category::class;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedTag;

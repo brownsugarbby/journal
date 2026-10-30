@@ -31,10 +31,10 @@ enum Role: string implements HasColor, HasLabel
     public function getLabel(): string
     {
         return match ($this) {
-            self::SuperAdmin => 'Superadmin',
-            self::Leader => 'Leader',
-            self::Admin => 'Admin',
-            self::StaffCs => 'Staff CS',
+            self::SuperAdmin => __('Superadmin'),
+            self::Leader => __('Leader'),
+            self::Admin => __('Admin'),
+            self::StaffCs => __('Staff CS'),
         };
     }
 

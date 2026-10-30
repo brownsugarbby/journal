@@ -3,6 +3,7 @@
 namespace App\Filament\Pages;
 
 use App\Enums\PeriodStatus;
+use App\Filament\Concerns\TranslatesPageLabels;
 use App\Models\Period;
 use App\Models\User;
 use App\Services\PeriodService;
@@ -30,6 +31,7 @@ use UnitEnum;
 class TutupBuku extends Page implements HasTable
 {
     use InteractsWithTable;
+    use TranslatesPageLabels;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedLockClosed;
 
@@ -83,16 +85,16 @@ class TutupBuku extends Page implements HasTable
                     ->visible(fn (Period $record): bool => $record->status === PeriodStatus::Open)
                     ->modalHeading(fn (Period $record): string => 'Tutup buku '.$record->label())
                     ->modalDescription(fn (Period $record): HtmlString => $this->checklist($record))
-                    ->modalSubmitActionLabel('Close the month')
+                    ->modalSubmitActionLabel(__('Close the month'))
                     ->action(function (Period $record, Action $action): void {
                         try {
                             $this->periods()->close($record, $this->user());
                         } catch (ValidationException $exception) {
-                            Notification::make()->title('Not closed')->body(collect($exception->errors())->flatten()->join(' '))->danger()->persistent()->send();
+                            Notification::make()->title(__('Not closed'))->body(collect($exception->errors())->flatten()->join(' '))->danger()->persistent()->send();
                             $action->halt();
                         }
 
-                        Notification::make()->title($record->label().' closed')->success()->send();
+                        Notification::make()->title(__(':period closed', ['period' => $record->label()]))->success()->send();
                     }),
                 Action::make('reopen')
                     ->label('Reopen')
@@ -100,17 +102,17 @@ class TutupBuku extends Page implements HasTable
                     ->color('danger')
                     ->visible(fn (Period $record): bool => $record->status === PeriodStatus::Closed)
                     ->requiresConfirmation()
-                    ->modalDescription('Entries dated in this month can be changed again; the closing snapshot is dropped. This is logged.')
+                    ->modalDescription(__('Entries dated in this month can be changed again; the closing snapshot is dropped. This is logged.'))
                     ->schema([TextInput::make('reason')->required()->maxLength(255)])
                     ->action(function (array $data, Period $record): void {
                         $this->periods()->reopen($record, $data['reason'], $this->user());
-                        Notification::make()->title($record->label().' reopened')->warning()->send();
+                        Notification::make()->title(__(':period reopened', ['period' => $record->label()]))->warning()->send();
                     }),
             ])
             ->defaultSort(fn ($query) => $query->orderByDesc('year')->orderByDesc('month'))
             ->paginated(false)
-            ->emptyStateHeading('No months yet')
-            ->emptyStateDescription('A month appears here after its first entry.');
+            ->emptyStateHeading(__('No months yet'))
+            ->emptyStateDescription(__('A month appears here after its first entry.'));
     }
 
     protected function checklist(Period $period): HtmlString
@@ -121,7 +123,7 @@ class TutupBuku extends Page implements HasTable
             ->join('');
 
         if ($checks['blockers'] === [] && $checks['warnings'] === []) {
-            return new HtmlString('All checks pass. Closing makes this month read-only and saves the closing balances.');
+            return new HtmlString(e(__('All checks pass. Closing makes this month read-only and saves the closing balances.')));
         }
 
         return new HtmlString(

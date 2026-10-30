@@ -13,8 +13,8 @@ enum FeeType: string implements HasColor, HasLabel
     public function getLabel(): string
     {
         return match ($this) {
-            self::Flat => 'Flat (Rp)',
-            self::Percent => 'Percent (%)',
+            self::Flat => __('Flat (Rp)'),
+            self::Percent => __('Percent (%)'),
         };
     }
 

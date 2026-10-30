@@ -17,17 +17,17 @@ final class ReportColumn
 
     public static function text(string $key, string $label): self
     {
-        return new self($key, $label, 'text');
+        return new self($key, __($label), 'text');
     }
 
     public static function money(string $key, string $label, int $decimals = 0): self
     {
-        return new self($key, $label, 'money', $decimals);
+        return new self($key, __($label), 'money', $decimals);
     }
 
     public static function number(string $key, string $label): self
     {
-        return new self($key, $label, 'number');
+        return new self($key, __($label), 'number');
     }
 
     public function isNumeric(): bool

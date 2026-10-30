@@ -58,13 +58,13 @@ class PendingTasks extends Widget
         }
 
         foreach (PayRun::query()->where('status', PayRunStatus::Draft)->orderBy('pay_date')->get() as $run) {
-            $tasks[] = ['text' => "{$run->label()} not paid yet (pay date {$run->pay_date->format('d/m')})", 'url' => PayRunResource::getUrl('sheet', ['record' => $run])];
+            $tasks[] = ['text' => __(':run not paid yet (pay date :date)', ['run' => $run->label(), 'date' => $run->pay_date->format('d/m')]), 'url' => PayRunResource::getUrl('sheet', ['record' => $run])];
         }
 
         $neverChecked = CompanyAccount::query()->where('is_active', true)->whereDoesntHave('balanceChecks')->count();
 
         if ($neverChecked > 0) {
-            $tasks[] = ['text' => "{$neverChecked} account(s) never checked with Cek Saldo", 'url' => null];
+            $tasks[] = ['text' => __(':count account(s) never checked with Cek Saldo', ['count' => $neverChecked]), 'url' => null];
         }
 
         if ($user->canCloseBooks()) {
@@ -73,7 +73,7 @@ class PendingTasks extends Widget
                 ->get()
                 ->filter(fn (Period $period): bool => now()->setDate($period->year, $period->month, 1)->endOfMonth()->isPast())
                 ->each(function (Period $period) use (&$tasks): void {
-                    $tasks[] = ['text' => "{$period->label()} has ended: tutup buku", 'url' => TutupBuku::getUrl()];
+                    $tasks[] = ['text' => __(':period has ended: tutup buku', ['period' => $period->label()]), 'url' => TutupBuku::getUrl()];
                 });
         }
 

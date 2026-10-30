@@ -13,8 +13,8 @@ enum PayType: string implements HasColor, HasLabel
     public function getLabel(): string
     {
         return match ($this) {
-            self::Gaji => 'Gaji',
-            self::Um => 'UM',
+            self::Gaji => __('Gaji'),
+            self::Um => __('UM'),
         };
     }
 

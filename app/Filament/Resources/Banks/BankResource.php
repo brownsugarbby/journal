@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\Banks;
 
 use App\Enums\BankType;
+use App\Filament\Concerns\TranslatesResourceLabels;
 use App\Filament\Resources\Banks\Pages\ManageBanks;
 use App\Filament\Support\Fields;
 use App\Models\Bank;
@@ -22,6 +23,8 @@ use UnitEnum;
 
 class BankResource extends Resource
 {
+    use TranslatesResourceLabels;
+
     protected static ?string $model = Bank::class;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedBuildingLibrary;
@@ -48,7 +51,7 @@ class BankResource extends Resource
                     ->maxLength(255),
                 TextInput::make('short_name')
                     ->maxLength(20)
-                    ->helperText('Label used in the old sheet tabs, e.g. MDR for Mandiri.'),
+                    ->helperText(__('Label used in the old sheet tabs, e.g. MDR for Mandiri.')),
                 Select::make('type')
                     ->options(BankType::class)
                     ->default(BankType::Bank)
@@ -58,7 +61,7 @@ class BankResource extends Resource
                     ->default('ID')
                     ->required()
                     ->dehydrateStateUsing(fn (string $state): string => strtoupper($state))
-                    ->helperText('2-letter code: ID, KH, TH...'),
+                    ->helperText(__('2-letter code: ID, KH, TH...')),
                 FileUpload::make('logo')
                     ->image()
                     ->disk('public')

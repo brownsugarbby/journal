@@ -32,7 +32,7 @@ class PeriodService
         $end = now()->setDate($period->year, $period->month, 1)->endOfMonth();
 
         if ($end->isFuture()) {
-            $blockers[] = "{$period->label()} has not ended yet.";
+            $blockers[] = __(':period has not ended yet.', ['period' => $period->label()]);
         }
 
         $accounts = CompanyAccount::query()->where('is_active', true)->orderBy('label')->get();
@@ -45,14 +45,14 @@ class PeriodService
             $check = $lastChecks->get($account->id);
 
             if ($check && ! $check->isMatching()) {
-                $blockers[] = "{$account->label}: last Cek Saldo has a selisih of ".number_format((float) $check->difference, 2, ',', '.').'.';
+                $blockers[] = __(':account: last Cek Saldo has a selisih of :amount.', ['account' => $account->label, 'amount' => number_format((float) $check->difference, 2, ',', '.')]);
             } elseif (! $check) {
-                $warnings[] = "{$account->label}: never checked with Cek Saldo.";
+                $warnings[] = __(':account: never checked with Cek Saldo.', ['account' => $account->label]);
             }
         }
 
         foreach (PayRun::query()->where(['year' => $period->year, 'month' => $period->month, 'status' => PayRunStatus::Draft])->get() as $run) {
-            $warnings[] = "{$run->label()} is still a draft (not paid).";
+            $warnings[] = __(':run is still a draft (not paid).', ['run' => $run->label()]);
         }
 
         $days = min($end->day, (int) now()->setDate($period->year, $period->month, 1)->daysInMonth);
@@ -66,7 +66,7 @@ class PeriodService
                 ->count();
 
             if ($filled < $days) {
-                $warnings[] = "Daily Panel Report {$brand->code}: ".($days - $filled).' day(s) without figures.';
+                $warnings[] = __('Daily Panel Report :brand: :days day(s) without figures.', ['brand' => $brand->code, 'days' => $days - $filled]);
             }
         }
 
@@ -76,11 +76,11 @@ class PeriodService
     public function close(Period $period, User $user): Period
     {
         if (! $user->canCloseBooks()) {
-            throw ValidationException::withMessages(['period' => 'Only a superadmin can close the books.']);
+            throw ValidationException::withMessages(['period' => __('Only a superadmin can close the books.')]);
         }
 
         if (! $period->isOpen()) {
-            throw ValidationException::withMessages(['period' => "{$period->label()} is already closed."]);
+            throw ValidationException::withMessages(['period' => __(':period is already closed.', ['period' => $period->label()])]);
         }
 
         $blockers = $this->checks($period)['blockers'];
@@ -121,7 +121,7 @@ class PeriodService
     public function reopen(Period $period, string $reason, User $user): Period
     {
         if (! $user->canCloseBooks()) {
-            throw ValidationException::withMessages(['period' => 'Only a superadmin can reopen the books.']);
+            throw ValidationException::withMessages(['period' => __('Only a superadmin can reopen the books.')]);
         }
 
         return DB::transaction(function () use ($period, $reason, $user): Period {

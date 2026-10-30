@@ -5,6 +5,7 @@ namespace App\Filament\Pages;
 use App\Enums\AccountKind;
 use App\Enums\BonusKind;
 use App\Enums\JournalType;
+use App\Filament\Concerns\TranslatesPageLabels;
 use App\Filament\Pages\Concerns\WorksWithJournals;
 use App\Filament\Support\Fields;
 use App\Models\Bank;
@@ -62,6 +63,7 @@ use UnitEnum;
 class Jurnal extends Page implements HasTable
 {
     use InteractsWithTable;
+    use TranslatesPageLabels;
     use WorksWithJournals;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedTableCells;
@@ -185,8 +187,8 @@ class Jurnal extends Page implements HasTable
     {
         if ($this->sheet() === null) {
             return $schema->components([
-                Section::make('No sheets assigned')
-                    ->description('Ask a superadmin to assign you brands and accounts on the Users screen.'),
+                Section::make(__('No sheets assigned'))
+                    ->description(__('Ask a superadmin to assign you brands and accounts on the Users screen.')),
             ]);
         }
 
@@ -276,7 +278,7 @@ class Jurnal extends Page implements HasTable
                 ->icon(Heroicon::OutlinedScale)
                 ->color('gray')
                 ->visible(fn (): bool => $this->account() !== null)
-                ->modalDescription(fn (): string => 'Type the real balance from mBanking / the PGA dashboard. Book balance now: '.Fields::rupiah($this->account()->balance()))
+                ->modalDescription(fn (): string => __('Type the real balance from mBanking / the PGA dashboard. Book balance now: :balance', ['balance' => Fields::rupiah($this->account()->balance())]))
                 ->schema([
                     Fields::money('actual_balance')->label('Actual balance')->required()->autofocus(),
                     Textarea::make('note')->rows(2),
@@ -286,8 +288,8 @@ class Jurnal extends Page implements HasTable
                     $this->refreshSheets();
 
                     Notification::make()
-                        ->title($check->isMatching() ? 'Saldo match' : 'Selisih '.Fields::rupiah($check->difference))
-                        ->body('Book '.Fields::rupiah($check->book_balance).' · Actual '.Fields::rupiah($check->actual_balance))
+                        ->title($check->isMatching() ? __('Saldo match') : __('Selisih :amount', ['amount' => Fields::rupiah($check->difference)]))
+                        ->body(__('Book :book · Actual :actual', ['book' => Fields::rupiah($check->book_balance), 'actual' => Fields::rupiah($check->actual_balance)]))
                         ->{$check->isMatching() ? 'success' : 'danger'}()
                         ->persistent(! $check->isMatching())
                         ->send();
@@ -306,8 +308,8 @@ class Jurnal extends Page implements HasTable
         return $schema
             ->statePath('entry')
             ->components([
-                Grid::make(['default' => 1, 'sm' => 2, 'lg' => 4, 'xl' => $this->entryColumnCount()])
-                    ->extraAttributes(['class' => 'fi-jurnal-entry-row'])
+                Grid::make()
+                    ->extraAttributes(['class' => 'fi-entry-row'])
                     ->schema(match ($kind) {
                         'account' => $this->accountEntryFields(),
                         'bonus' => $this->bonusEntryFields(),
@@ -318,19 +320,9 @@ class Jurnal extends Page implements HasTable
     }
 
     /**
-     * One grid column per cell, plus one extra for each of the three wide
-     * cells (TGL, name, KETERANGAN) that span two at desktop width.
-     */
-    protected function entryColumnCount(): int
-    {
-        return 3 + match ($this->sheet()['kind'] ?? null) {
-            'account' => 8 + ($this->isGateway() ? 1 : 0) + ($this->isSharedAccount() ? 1 : 0),
-            'cashback' => 8,
-            default => 6,
-        };
-    }
-
-    /**
+     * Text cells (name, KETERANGAN) get a wider share of the entry row; see
+     * resources/views/filament/entry-row-styles.blade.php.
+     *
      * @template T of \Filament\Forms\Components\Field
      *
      * @param  T  $field
@@ -338,7 +330,7 @@ class Jurnal extends Page implements HasTable
      */
     protected function wide($field)
     {
-        return $field->columnSpan(['default' => 1, 'xl' => 2]);
+        return $field->extraFieldWrapperAttributes(['class' => 'fi-entry-wide'], merge: true);
     }
 
     /**
@@ -437,7 +429,7 @@ class Jurnal extends Page implements HasTable
 
     protected function dateField(): DatePicker
     {
-        return $this->wide(DatePicker::make('entry_date'))
+        return DatePicker::make('entry_date')
             ->label('Tgl')
             ->native()
             ->maxDate(today())
@@ -580,7 +572,7 @@ class Jurnal extends Page implements HasTable
 
         if ($masuk === $keluar) {
             throw ValidationException::withMessages([
-                'entry.masuk' => $masuk ? 'Fill either KELUAR or MASUK, not both.' : 'Fill KELUAR (WD) or MASUK (DP).',
+                'entry.masuk' => $masuk ? __('Fill either KELUAR or MASUK, not both.') : __('Fill KELUAR (WD) or MASUK (DP).'),
             ]);
         }
 
@@ -597,7 +589,7 @@ class Jurnal extends Page implements HasTable
         $this->refreshSheets();
 
         Notification::make()
-            ->title("{$journal->type->getLabel()} ".Fields::rupiah($journal->amount).' saved')
+            ->title(__(':type :amount saved', ['type' => $journal->type->getLabel(), 'amount' => Fields::rupiah($journal->amount)]))
             ->body($journal->number)
             ->success()
             ->duration(2500)
@@ -607,8 +599,8 @@ class Jurnal extends Page implements HasTable
 
         if ($account && $account->isOverMax()) {
             Notification::make()
-                ->title("{$account->label} is over max balance")
-                ->body('Saldo '.Fields::rupiah($account->balance()).' · max '.Fields::rupiah($account->max_balance).'. Transfer to pusat.')
+                ->title(__(':account is over max balance', ['account' => $account->label]))
+                ->body(__('Saldo :balance · max :max. Transfer to pusat.', ['balance' => Fields::rupiah($account->balance()), 'max' => Fields::rupiah($account->max_balance)]))
                 ->warning()
                 ->persistent()
                 ->send();
@@ -688,8 +680,8 @@ class Jurnal extends Page implements HasTable
             ->defaultSort('journal_id', 'desc')
             ->paginated([25, 50, 100])
             ->defaultPaginationPageOption(50)
-            ->emptyStateHeading('No entries yet')
-            ->emptyStateDescription('Use the entry row above: fill MASUK for a DP or KELUAR for a WD, then press Enter.');
+            ->emptyStateHeading(__('No entries yet'))
+            ->emptyStateDescription(__('Use the entry row above: fill MASUK for a DP or KELUAR for a WD, then press Enter.'));
     }
 
     protected function bonusTable(Table $table, bool $cashback): Table
@@ -726,7 +718,7 @@ class Jurnal extends Page implements HasTable
             ->defaultSort('id', 'desc')
             ->paginated([25, 50, 100])
             ->defaultPaginationPageOption(50)
-            ->emptyStateHeading('No entries yet');
+            ->emptyStateHeading(__('No entries yet'));
     }
 
     /**
@@ -760,21 +752,21 @@ class Jurnal extends Page implements HasTable
             Action::make('edit')
                 ->icon(Heroicon::OutlinedPencilSquare)
                 ->iconButton()
-                ->tooltip('Edit (inside the edit window)')
+                ->tooltip(__('Edit (inside the edit window)'))
                 ->visible(fn (Model $record): bool => $this->user()->can('update', $journalOf($record)))
-                ->modalHeading(fn (Model $record): string => 'Edit '.$journalOf($record)->number)
+                ->modalHeading(fn (Model $record): string => __('Edit :number', ['number' => $journalOf($record)->number]))
                 ->fillForm(fn (Model $record): array => $this->editFormData($journalOf($record)))
                 ->schema(fn (Model $record): array => $this->editFormFields($journalOf($record)))
                 ->action(function (array $data, Model $record, Action $action) use ($journalOf): void {
                     try {
                         app(JournalService::class)->update($journalOf($record), $data, $this->user());
                     } catch (ValidationException $exception) {
-                        Notification::make()->title('Not saved')->body(collect($exception->errors())->flatten()->join(' '))->danger()->send();
+                        Notification::make()->title(__('Not saved'))->body(collect($exception->errors())->flatten()->join(' '))->danger()->send();
                         $action->halt();
                     }
 
                     $this->refreshSheets();
-                    Notification::make()->title('Entry updated')->success()->send();
+                    Notification::make()->title(__('Entry updated'))->success()->send();
                 }),
             $this->voidAction($journalOf),
         ];

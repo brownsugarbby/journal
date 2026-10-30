@@ -14,9 +14,9 @@ enum LoanCounterpartyType: string implements HasColor, HasLabel
     public function getLabel(): string
     {
         return match ($this) {
-            self::Employee => 'Employee',
-            self::Partner => 'Partner',
-            self::External => 'External',
+            self::Employee => __('Employee'),
+            self::Partner => __('Partner'),
+            self::External => __('External'),
         };
     }
 

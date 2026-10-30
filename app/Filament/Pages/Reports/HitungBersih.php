@@ -5,6 +5,7 @@ namespace App\Filament\Pages\Reports;
 use App\Enums\PayRunStatus;
 use App\Enums\PayType;
 use App\Enums\PlGroup;
+use App\Filament\Concerns\TranslatesPageLabels;
 use App\Filament\Pages\Reports\Concerns\IsReportPage;
 use App\Models\Category;
 use App\Models\JournalLine;
@@ -29,6 +30,7 @@ use UnitEnum;
 class HitungBersih extends Page implements HasTable
 {
     use IsReportPage;
+    use TranslatesPageLabels;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedPresentationChartBar;
 
@@ -58,7 +60,7 @@ class HitungBersih extends Page implements HasTable
 
     protected function filterFields(): array
     {
-        return [$this->monthField(), $this->brandField('All brands (consolidated)')];
+        return [$this->monthField(), $this->brandField(__('All brands (consolidated)'))];
     }
 
     protected function buildReport(): ReportTable
@@ -92,7 +94,7 @@ class HitungBersih extends Page implements HasTable
             }
 
             $groupTotals[$group->value] = $groupTotal;
-            $rows[] = ['keterangan' => $group === PlGroup::NotInPl ? 'Not in P&L (info)' : $group->getLabel(), 'jumlah' => $groupTotal, '_style' => 'section'];
+            $rows[] = ['keterangan' => $group === PlGroup::NotInPl ? __('Not in P&L (info)') : $group->getLabel(), 'jumlah' => $groupTotal, '_style' => 'section'];
             array_push($rows, ...$lines);
         }
 
@@ -119,8 +121,8 @@ class HitungBersih extends Page implements HasTable
             ],
             rows: $rows,
             notes: array_filter([
-                'LABA BERSIH = Pendapatan Kotor − Biaya Tetap − Biaya Variable. "Not in P&L" lines (bonus, cashback, selisih kurs, penyesuaian) are shown for information and are not in the profit until H D confirms where they belong.',
-                $this->brandModel() ? 'Per brand: only entries tagged with this brand. Shared costs (no WEB / brand) appear in the consolidated view only.' : null,
+                __('LABA BERSIH = Pendapatan Kotor − Biaya Tetap − Biaya Variable. "Not in P&L" lines (bonus, cashback, selisih kurs, penyesuaian) are shown for information and are not in the profit until H D confirms where they belong.'),
+                $this->brandModel() ? __('Per brand: only entries tagged with this brand. Shared costs (no WEB / brand) appear in the consolidated view only.') : null,
             ]),
         );
     }

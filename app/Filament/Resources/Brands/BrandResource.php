@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\Brands;
 
+use App\Filament\Concerns\TranslatesResourceLabels;
 use App\Filament\Resources\Brands\Pages\ManageBrands;
 use App\Filament\Support\Fields;
 use App\Models\Brand;
@@ -17,6 +18,8 @@ use UnitEnum;
 
 class BrandResource extends Resource
 {
+    use TranslatesResourceLabels;
+
     protected static ?string $model = Brand::class;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedGlobeAlt;
@@ -38,7 +41,7 @@ class BrandResource extends Resource
                     ->maxLength(20)
                     ->unique(ignoreRecord: true)
                     ->dehydrateStateUsing(fn (string $state): string => strtoupper($state))
-                    ->helperText('Short code used in reports, e.g. KES, JALU.'),
+                    ->helperText(__('Short code used in reports, e.g. KES, JALU.')),
                 TextInput::make('name')
                     ->required()
                     ->maxLength(255),

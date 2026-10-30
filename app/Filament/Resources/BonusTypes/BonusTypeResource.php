@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\BonusTypes;
 
 use App\Enums\BonusKind;
+use App\Filament\Concerns\TranslatesResourceLabels;
 use App\Filament\Resources\BonusTypes\Pages\ManageBonusTypes;
 use App\Filament\Support\Fields;
 use App\Models\BonusType;
@@ -21,6 +22,8 @@ use UnitEnum;
 
 class BonusTypeResource extends Resource
 {
+    use TranslatesResourceLabels;
+
     protected static ?string $model = BonusType::class;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedGift;
@@ -45,14 +48,14 @@ class BonusTypeResource extends Resource
                     ->live(),
                 Fields::activeRelation('brand_id', 'brand', 'code')
                     ->label('Brand')
-                    ->placeholder('All brands'),
+                    ->placeholder(__('All brands')),
                 TextInput::make('default_percentage')
                     ->label('Default %')
                     ->numeric()
                     ->minValue(0)
                     ->maxValue(100)
                     ->suffix('%')
-                    ->helperText('Cashback = WINLOSE × this %.')
+                    ->helperText(__('Cashback = WINLOSE × this %.'))
                     ->visible(fn (Get $get): bool => ($get('kind') instanceof BonusKind ? $get('kind') : BonusKind::tryFrom((string) $get('kind'))) === BonusKind::Cashback)
                     ->required(fn (Get $get): bool => ($get('kind') instanceof BonusKind ? $get('kind') : BonusKind::tryFrom((string) $get('kind'))) === BonusKind::Cashback),
                 Fields::activeToggle(),
@@ -65,7 +68,7 @@ class BonusTypeResource extends Resource
             ->columns([
                 TextColumn::make('name')->searchable()->sortable(),
                 TextColumn::make('kind')->badge(),
-                TextColumn::make('brand.code')->label('Brand')->badge()->placeholder('All'),
+                TextColumn::make('brand.code')->label('Brand')->badge()->placeholder(__('All')),
                 TextColumn::make('default_percentage')->label('Default %')->suffix(' %')->placeholder('-'),
                 Fields::activeColumn(),
             ])

@@ -16,8 +16,8 @@ enum FeePaidBy: string implements HasColor, HasLabel
     public function getLabel(): string
     {
         return match ($this) {
-            self::Company => 'Company',
-            self::Member => 'Member',
+            self::Company => __('Company'),
+            self::Member => __('Member'),
         };
     }
 

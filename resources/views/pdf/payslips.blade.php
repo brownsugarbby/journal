@@ -51,7 +51,7 @@
         </table>
 
         <table class="amounts">
-            <tr><td>{{ $run->pay_type->getLabel() }} full</td><td class="v">{{ $fmt($item->gross) }}</td></tr>
+            <tr><td>{{ __(':type full', ['type' => $run->pay_type->getLabel()]) }}</td><td class="v">{{ $fmt($item->gross) }}</td></tr>
             @foreach ($columns as $column)
                 @php($value = $item->valueFor($column))
                 @continue(! $value || ($value->value === null && $value->text === null))

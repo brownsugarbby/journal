@@ -16,8 +16,8 @@ enum PartnerKind: string implements HasColor, HasLabel
     public function getLabel(): string
     {
         return match ($this) {
-            self::Capital => 'Modal masuk',
-            self::Prive => 'Prive (ambil)',
+            self::Capital => __('Modal masuk'),
+            self::Prive => __('Prive (ambil)'),
         };
     }
 

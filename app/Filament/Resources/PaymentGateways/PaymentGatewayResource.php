@@ -4,6 +4,7 @@ namespace App\Filament\Resources\PaymentGateways;
 
 use App\Enums\FeePaidBy;
 use App\Enums\FeeType;
+use App\Filament\Concerns\TranslatesResourceLabels;
 use App\Filament\Resources\PaymentGateways\Pages\ManagePaymentGateways;
 use App\Filament\Support\Fields;
 use App\Models\Currency;
@@ -28,6 +29,8 @@ use UnitEnum;
 
 class PaymentGatewayResource extends Resource
 {
+    use TranslatesResourceLabels;
+
     protected static ?string $model = PaymentGateway::class;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedCreditCard;
@@ -59,7 +62,7 @@ class PaymentGatewayResource extends Resource
                 TextInput::make('name')
                     ->required()
                     ->maxLength(255)
-                    ->helperText('Fee lines appear in the P&L as "Potongan DP/WD PGA {name}".'),
+                    ->helperText(__('Fee lines appear in the P&L as "Potongan DP/WD PGA {name}".')),
                 TextInput::make('dashboard_url')
                     ->label('Dashboard URL')
                     ->url()
@@ -67,8 +70,8 @@ class PaymentGatewayResource extends Resource
                 Fields::activeRelation('currency_id', 'currency', 'code')
                     ->default(fn () => Currency::query()->where('is_base', true)->value('id'))
                     ->required(),
-                Section::make('Default fees (POTONGAN)')
-                    ->description('Pre-filled on DP/WD entries. A gateway account can override them. Every change is kept in the fee history.')
+                Section::make(__('Default fees (POTONGAN)'))
+                    ->description(__('Pre-filled on DP/WD entries. A gateway account can override them. Every change is kept in the fee history.'))
                     ->columnSpanFull()
                     ->columns(2)
                     ->schema([
@@ -102,7 +105,7 @@ class PaymentGatewayResource extends Resource
     public static function feeValueInput(string $direction): TextInput
     {
         return TextInput::make("{$direction}_fee_value")
-            ->label(strtoupper($direction).' fee')
+            ->label(__(':direction fee', ['direction' => strtoupper($direction)]))
             ->numeric()
             ->minValue(0)
             ->default(0)
@@ -149,7 +152,7 @@ class PaymentGatewayResource extends Resource
                     ->icon(Heroicon::OutlinedClock)
                     ->color('gray')
                     ->modalSubmitAction(false)
-                    ->modalCancelActionLabel('Close')
+                    ->modalCancelActionLabel(__('Close'))
                     ->schema([
                         RepeatableEntry::make('feeHistories')
                             ->hiddenLabel()
@@ -162,7 +165,7 @@ class PaymentGatewayResource extends Resource
                                 TextEntry::make('wd_fee_value')
                                     ->label('WD fee')
                                     ->formatStateUsing(fn (PaymentGatewayFeeHistory $record): string => static::formatFee($record->wd_fee_type, $record->wd_fee_value)),
-                                TextEntry::make('createdBy.name')->label('By')->placeholder('System'),
+                                TextEntry::make('createdBy.name')->label('By')->placeholder(__('System')),
                             ]),
                     ]),
             ])

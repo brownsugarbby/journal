@@ -4,6 +4,7 @@ namespace App\Filament\Resources\PayColumns;
 
 use App\Enums\PayColumnKind;
 use App\Enums\PayType;
+use App\Filament\Concerns\TranslatesResourceLabels;
 use App\Filament\Resources\PayColumns\Pages\ManagePayColumns;
 use App\Filament\Support\Fields;
 use App\Models\PayColumn;
@@ -25,6 +26,8 @@ use UnitEnum;
  */
 class PayColumnResource extends Resource
 {
+    use TranslatesResourceLabels;
+
     protected static ?string $model = PayColumn::class;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedViewColumns;
@@ -52,13 +55,13 @@ class PayColumnResource extends Resource
                     ->options(PayColumnKind::class)
                     ->default(PayColumnKind::Info)
                     ->required()
-                    ->helperText('Info: shown only. Addition / deduction: changes SISA (net pay).')
+                    ->helperText(__('Info: shown only. Addition / deduction: changes SISA (net pay).'))
                     ->live(),
                 Select::make('category_id')
                     ->label('Own P&L line')
                     ->relationship('category', 'name', fn ($query) => $query->where('is_active', true)->where('type', 'expense'))
-                    ->placeholder('Book with Gaji / UM')
-                    ->helperText('e.g. put "Lembur Offday" on its own line in Hitung Bersih.')
+                    ->placeholder(__('Book with Gaji / UM'))
+                    ->helperText(__('e.g. put "Lembur Offday" on its own line in Hitung Bersih.'))
                     ->visible(fn ($get): bool => in_array($get('kind') instanceof PayColumnKind ? $get('kind')->value : $get('kind'), ['addition', 'deduction'], true)),
                 TextInput::make('sort_order')
                     ->numeric()
