@@ -16,11 +16,13 @@ use App\Models\Journal;
 use App\Models\JournalLine;
 use App\Models\Member;
 use App\Models\User;
+use App\Services\JournalImport;
 use App\Services\JournalService;
 use App\Support\Ledger;
 use BackedEnum;
 use Filament\Actions\Action;
 use Filament\Forms\Components\DatePicker;
+use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
@@ -47,8 +49,11 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\HtmlString;
 use Illuminate\Validation\ValidationException;
 use Livewire\Attributes\Url;
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
 use UnitEnum;
 
 /**
@@ -294,7 +299,97 @@ class Jurnal extends Page implements HasTable
                         ->persistent(! $check->isMatching())
                         ->send();
                 }),
+            Action::make('excelTemplate')
+                ->label('Template Excel')
+                ->icon(Heroicon::OutlinedArrowDownTray)
+                ->color('gray')
+                ->visible(fn (): bool => $this->importKind() !== null)
+                ->action(fn (): BinaryFileResponse => response()
+                    ->download(app(JournalImport::class)->template($this->importKind()), "template-{$this->importKind()}.xlsx")
+                    ->deleteFileAfterSend()),
+            Action::make('importExcel')
+                ->label('Import Excel')
+                ->icon(Heroicon::OutlinedArrowUpTray)
+                ->color('gray')
+                ->visible(fn (): bool => $this->importKind() !== null)
+                ->modalHeading(fn (): string => __('Import Excel: :sheet', ['sheet' => $this->sheet()['label']]))
+                ->modalDescription(fn (): string => $this->importKind() === 'cashback'
+                    ? __('Columns: TGL, NAMA BONUS, WINLOSE, %, USERNAME, KETERANGAN. BONUS is recalculated. Rows imported before are skipped.')
+                    : __('Columns: TGL, NAMA REKENING, KELUAR, MASUK, POTONGAN, USERNAME, WAKTU, OP, KETERANGAN. SISA WD, SISA DP and SALDO are recalculated. Rows imported before are skipped.'))
+                ->schema([
+                    FileUpload::make('file')
+                        ->label('File (.xlsx / .csv)')
+                        ->disk('local')
+                        ->directory('imports')
+                        ->storeFileNamesIn('file_name')
+                        ->acceptedFileTypes([
+                            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                            'text/csv', 'text/plain', 'application/csv', 'application/vnd.ms-excel',
+                        ])
+                        ->maxSize(10240)
+                        ->required(),
+                ])
+                ->modalSubmitActionLabel('Import')
+                ->action(fn (array $data) => $this->importExcel($data)),
         ];
+    }
+
+    /**
+     * Which Excel import this tab takes: a PGA gateway account or CASHBACK.
+     */
+    protected function importKind(): ?string
+    {
+        return match (true) {
+            $this->isGateway() => 'gateway',
+            ($this->sheet()['kind'] ?? null) === 'cashback' => 'cashback',
+            default => null,
+        };
+    }
+
+    /**
+     * @param  array<string, mixed>  $data
+     */
+    protected function importExcel(array $data): void
+    {
+        $disk = Storage::disk('local');
+        $extension = pathinfo($data['file_name'] ?? $data['file'], PATHINFO_EXTENSION);
+        $import = app(JournalImport::class);
+
+        try {
+            $result = $this->importKind() === 'cashback'
+                ? $import->cashback($this->brand(), $disk->path($data['file']), $this->user(), $extension)
+                : $import->gateway($this->account(), $disk->path($data['file']), $this->user(), $extension);
+        } catch (ValidationException $exception) {
+            Notification::make()
+                ->title(__('Nothing imported'))
+                ->body(new HtmlString(collect($exception->errors())->flatten()->map(fn (string $message): string => e($message))->join('<br>')))
+                ->danger()
+                ->persistent()
+                ->send();
+
+            return;
+        } finally {
+            $disk->delete($data['file']);
+        }
+
+        $this->refreshSheets();
+
+        $notification = Notification::make()
+            ->title(__(':count row(s) imported', ['count' => $result->imported]))
+            ->body($result->skipped ? __(':count row(s) skipped: already imported before.', ['count' => $result->skipped]) : null)
+            ->success();
+
+        if ($result->fileSaldo !== null) {
+            $book = $this->account()->balance();
+            $matches = bccomp($book, $result->fileSaldo, 2) === 0;
+
+            $notification
+                ->body(trim($notification->getBody().' '.__('SALDO in the file :file · book saldo :book.', ['file' => Fields::rupiah($result->fileSaldo), 'book' => Fields::rupiah($book)])))
+                ->status($matches ? 'success' : 'warning')
+                ->persistent(! $matches);
+        }
+
+        $notification->send();
     }
 
     // ---------------------------------------------------------------------
@@ -663,8 +758,8 @@ class Jurnal extends Page implements HasTable
                     ->weight('bold')
                     ->alignEnd(),
                 TextColumn::make('journal.member.member_id')->label('Username')->searchable()->weight('bold'),
-                TextColumn::make('journal.created_at')->label('Waktu')->dateTime('H:i:s'),
-                TextColumn::make('journal.createdBy.username')->label('Op'),
+                TextColumn::make('waktu')->label('Waktu')->state(fn (JournalLine $record): string => $this->entryTime($record->journal)),
+                TextColumn::make('op')->label('Op')->state(fn (JournalLine $record): ?string => $record->journal->source_operator ?? $record->journal->createdBy?->username),
                 TextColumn::make('journal.memberBank.short_name')->label('Bank')->placeholder('-'),
                 TextColumn::make('keterangan')
                     ->label('Keterangan')
@@ -705,8 +800,8 @@ class Jurnal extends Page implements HasTable
                     ->weight('bold')
                     ->alignEnd(),
                 TextColumn::make('member.member_id')->label('Username')->searchable()->weight('bold'),
-                TextColumn::make('created_at')->label('Waktu')->dateTime('H:i:s'),
-                TextColumn::make('createdBy.username')->label('Op'),
+                TextColumn::make('waktu')->label('Waktu')->state(fn (Journal $record): string => $this->entryTime($record)),
+                TextColumn::make('op')->label('Op')->state(fn (Journal $record): ?string => $record->source_operator ?? $record->createdBy?->username),
                 TextColumn::make('note')->label('Keterangan')->placeholder('-')->wrap()->limit(60),
                 TextColumn::make('status')
                     ->state(fn (Journal $record): ?string => $this->status($record))
@@ -719,6 +814,14 @@ class Jurnal extends Page implements HasTable
             ->paginated([25, 50, 100])
             ->defaultPaginationPageOption(50)
             ->emptyStateHeading(__('No entries yet'));
+    }
+
+    /**
+     * WAKTU from the PGA file for imported rows, else when it was entered.
+     */
+    protected function entryTime(Journal $journal): string
+    {
+        return $journal->source_time !== null ? substr($journal->source_time, 0, 8) : $journal->created_at->format('H:i:s');
     }
 
     /**

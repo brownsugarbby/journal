@@ -15,6 +15,7 @@ use App\Models\Journal;
 use App\Models\Member;
 use App\Models\Period;
 use App\Models\User;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -40,7 +41,9 @@ class JournalService
     /**
      * @param  array<string, mixed>  $data  entry_date, company_account_id, brand_id, member_id,
      *                                      member_bank_id, member_account_name, amount, fee,
-     *                                      bonus_type_id, winlose, percentage, is_manual, note
+     *                                      bonus_type_id, winlose, percentage, is_manual, note;
+     *                                      from an Excel import also import_key, source_time,
+     *                                      source_operator
      */
     public function post(JournalType $type, array $data, User $user): Journal
     {
@@ -50,6 +53,7 @@ class JournalService
 
             $journal = Journal::query()->create([
                 ...$attributes,
+                ...array_filter(Arr::only($data, ['import_key', 'source_time', 'source_operator']), filled(...)),
                 'type' => $type,
                 'number' => $this->nextNumber($type, $period),
                 'period_id' => $period->id,
@@ -141,7 +145,7 @@ class JournalService
                 'void_reason' => $reason,
             ]);
 
-            $reversal = $journal->replicate(['number', 'voided_at', 'voided_by', 'void_reason', 'created_by', 'created_ip']);
+            $reversal = $journal->replicate(['number', 'voided_at', 'voided_by', 'void_reason', 'created_by', 'created_ip', 'import_key']);
             $reversal->fill([
                 'number' => $journal->number.'-R',
                 'reversal_of_id' => $journal->id,
