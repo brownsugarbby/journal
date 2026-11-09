@@ -14,6 +14,7 @@ use App\Filament\Resources\Categories\CategoryResource;
 use App\Filament\Resources\Companies\CompanyResource;
 use App\Filament\Resources\Employees\EmployeeResource;
 use App\Filament\Resources\PayRuns\PayRunResource;
+use App\Filament\Support\MenuSearch;
 use App\Support\AppSettings;
 use Filament\Http\Middleware\Authenticate;
 use Filament\Http\Middleware\AuthenticateSession;
@@ -61,6 +62,7 @@ class AdminPanelProvider extends PanelProvider
             // Menu across the top (dropdown per group) so the wide sheets get the
             // whole screen; phones and small tablets get the usual menu drawer.
             ->topNavigation()
+            ->globalSearch(MenuSearch::class)
             ->maxContentWidth(Width::Full)
             ->renderHook(PanelsRenderHook::STYLES_AFTER, fn (): View => view('filament.entry-row-styles'))
             ->renderHook(
