@@ -31,4 +31,28 @@
     .fi-entry-row .fi-fo-field-label-content {
         white-space: nowrap;
     }
+
+    .fi-opening-row {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: baseline;
+        gap: 0.25rem 0.75rem;
+        padding: 0.625rem 1.5rem;
+        font-size: 0.875rem;
+        background: var(--gray-50);
+        border-top: 1px solid var(--gray-200);
+    }
+
+    .fi-opening-row strong {
+        margin-left: auto;
+    }
+
+    .fi-opening-row-date {
+        color: var(--gray-500);
+    }
+
+    .dark .fi-opening-row {
+        background: rgb(255 255 255 / 0.05);
+        border-top-color: rgb(255 255 255 / 0.1);
+    }
 </style>

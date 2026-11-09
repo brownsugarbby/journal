@@ -4,6 +4,8 @@ namespace App\Providers\Filament;
 
 use App\Filament\Auth\EditProfile;
 use App\Filament\Auth\Login;
+use App\Filament\Pages\Jurnal;
+use App\Filament\Pages\Pusat;
 use App\Support\AppSettings;
 use Filament\Http\Middleware\Authenticate;
 use Filament\Http\Middleware\AuthenticateSession;
@@ -13,6 +15,7 @@ use Filament\Pages\Dashboard;
 use Filament\Panel;
 use Filament\PanelProvider;
 use Filament\Support\Colors\Color;
+use Filament\Tables\View\TablesRenderHook;
 use Filament\View\PanelsRenderHook;
 use Filament\Widgets\AccountWidget;
 use Illuminate\Contracts\View\View;
@@ -50,6 +53,13 @@ class AdminPanelProvider extends PanelProvider
             ]))
             ->sidebarCollapsibleOnDesktop()
             ->renderHook(PanelsRenderHook::STYLES_AFTER, fn (): View => view('filament.entry-row-styles'))
+            ->renderHook(
+                TablesRenderHook::CONTENT_BEFORE,
+                fn (array $data): View|string => ($account = $data['table']->getLivewire()->account())
+                    ? view('filament.opening-balance-row', ['account' => $account])
+                    : '',
+                scopes: [Jurnal::class, Pusat::class],
+            )
             ->discoverResources(in: app_path('Filament/Resources'), for: 'App\Filament\Resources')
             ->discoverPages(in: app_path('Filament/Pages'), for: 'App\Filament\Pages')
             ->pages([
