@@ -124,7 +124,8 @@ class Pusat extends Page implements HasTable
 
     public function updatedActiveTab(): void
     {
-        $this->resetPage();
+        // The table was built for the old tab when this request booted.
+        $this->resetTable();
         $this->resetEntry();
     }
 

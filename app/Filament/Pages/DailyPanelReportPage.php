@@ -9,6 +9,7 @@ use App\Models\Brand;
 use App\Models\DailyPanelReport;
 use App\Models\Period;
 use App\Models\User;
+use App\Reports\DailyMoney;
 use BackedEnum;
 use Carbon\CarbonPeriod;
 use Filament\Forms\Components\Select;
@@ -27,6 +28,7 @@ use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Collection as SupportCollection;
 use Livewire\Attributes\Url;
 use UnitEnum;
 
@@ -56,6 +58,11 @@ class DailyPanelReportPage extends Page implements HasTable
 
     #[Url]
     public ?string $month = null;
+
+    /**
+     * @var array<string, SupportCollection<string, array<string, string>>>
+     */
+    protected array $moneyCache = [];
 
     public static function canAccess(): bool
     {
@@ -186,6 +193,13 @@ class DailyPanelReportPage extends Page implements HasTable
             ->columns([
                 TextColumn::make('report_date')->label('Tanggal')->date('d-m-Y')->weight('bold'),
                 $this->cell('new_member', 'New member', integer: true),
+                $this->moneyColumn('dp', 'Total DP'),
+                $this->moneyColumn('dp_pga', 'Total DP PGA'),
+                $this->moneyColumn('dp_all', 'Total DP all'),
+                $this->moneyColumn('wd', 'Total WD'),
+                $this->moneyColumn('wd_manual', 'Total WD manual'),
+                $this->moneyColumn('wd_all', 'Total WD all'),
+                $this->moneyColumn('in_out', 'Total in/out'),
                 $this->cell('winlose', 'Winlose harian', allowNegative: true),
                 $this->cell('turnover', 'Turnover'),
                 $this->cell('from_dp', 'From DP'),
@@ -204,6 +218,7 @@ class DailyPanelReportPage extends Page implements HasTable
                     ->formatStateUsing(fn ($state) => Fields::rupiah($state))
                     ->color('gray')
                     ->alignEnd(),
+                $this->moneyColumn('bonus_manual', 'Bonus manual'),
                 TextColumn::make('updated_by')
                     ->label('Op')
                     ->formatStateUsing(fn ($state) => User::query()->find($state)?->username)
@@ -221,6 +236,35 @@ class DailyPanelReportPage extends Page implements HasTable
             ->label($label)
             ->rules(array_filter(['nullable', 'numeric', $integer ? 'integer' : null, $allowNegative ? null : 'min:0']))
             ->disabled(fn (): bool => $this->isLocked());
+    }
+
+    /**
+     * A read-only money column of the sheet (TOTAL DP … BONUS MANUAL),
+     * summed from the jurnal. Leaders and superadmins only: admins who enter
+     * panel figures do not see the brand's money totals (as in the reports).
+     */
+    protected function moneyColumn(string $key, string $label): TextColumn
+    {
+        return TextColumn::make("money_{$key}")
+            ->label($label)
+            ->state(fn (DailyPanelReport $record): string => ($this->moneyByDay()->get($record->report_date->toDateString()) ?? DailyMoney::empty())[$key])
+            ->formatStateUsing(fn ($state) => Fields::rupiah($state))
+            ->color('gray')
+            ->alignEnd()
+            ->visible(fn (): bool => $this->user()->hasFullAccess());
+    }
+
+    /**
+     * Jurnal totals per day for the brand and month on screen.
+     *
+     * @return SupportCollection<string, array<string, string>>
+     */
+    protected function moneyByDay(): SupportCollection
+    {
+        $start = $this->monthDate();
+        $key = $this->activeTab.'|'.$start->format('Y-m');
+
+        return $this->moneyCache[$key] ??= DailyMoney::byDay($start->toDateString(), $start->copy()->endOfMonth()->toDateString(), (int) $this->activeTab);
     }
 
     protected function user(): User

@@ -61,12 +61,6 @@ class EmployeeResource extends Resource
                         DatePicker::make('join_date')
                             ->label('Join date')
                             ->helperText(__('LAMA KERJA is calculated from this.')),
-                        Select::make('user_id')
-                            ->label('Login user')
-                            ->relationship('user', 'username')
-                            ->searchable()
-                            ->preload()
-                            ->placeholder(__('None')),
                     ]),
                 Section::make(__('Pay'))
                     ->columnSpanFull()
@@ -102,11 +96,24 @@ class EmployeeResource extends Resource
                             ->label('Nama rek')
                             ->maxLength(255),
                     ]),
-                Textarea::make('notes')
-                    ->label('Keterangan')
-                    ->rows(2)
-                    ->columnSpanFull(),
-                Fields::activeToggle(),
+                // Rarely needed: kept closed so the form stays short.
+                Section::make(__('Other'))
+                    ->collapsed()
+                    ->columnSpanFull()
+                    ->columns(2)
+                    ->schema([
+                        Select::make('user_id')
+                            ->label('Login user')
+                            ->relationship('user', 'username')
+                            ->searchable()
+                            ->preload()
+                            ->placeholder(__('None')),
+                        Fields::activeToggle(),
+                        Textarea::make('notes')
+                            ->label('Keterangan')
+                            ->rows(2)
+                            ->columnSpanFull(),
+                    ]),
             ]);
     }
 

@@ -105,7 +105,9 @@ class Jurnal extends Page implements HasTable
 
     public function updatedActiveTab(): void
     {
-        $this->resetPage();
+        // The table was built for the old tab when this request booted:
+        // rebuild it, or a BONUS tab keeps the account columns until reload.
+        $this->resetTable();
         $this->resetEntry();
     }
 
@@ -752,6 +754,18 @@ class Jurnal extends Page implements HasTable
                     ->formatStateUsing(fn ($state, JournalLine $record) => $record->journal->isReversal() || (float) $state === 0.0 ? null : Fields::rupiah($state))
                     ->alignEnd()
                     ->visible($this->isGateway()),
+                TextColumn::make('sisa_wd')
+                    ->label('Sisa WD')
+                    ->state(fn (JournalLine $record): ?string => $this->sisa($record->journal, JournalType::Withdraw))
+                    ->formatStateUsing(fn ($state) => Fields::rupiah($state))
+                    ->alignEnd()
+                    ->visible($this->isGateway()),
+                TextColumn::make('sisa_dp')
+                    ->label('Sisa DP')
+                    ->state(fn (JournalLine $record): ?string => $this->sisa($record->journal, JournalType::Deposit))
+                    ->formatStateUsing(fn ($state) => Fields::rupiah($state))
+                    ->alignEnd()
+                    ->visible($this->isGateway()),
                 TextColumn::make('running_balance')
                     ->label('Saldo')
                     ->formatStateUsing(fn ($state) => Fields::rupiah($state))
@@ -835,6 +849,17 @@ class Jurnal extends Page implements HasTable
         return in_array($journal->type, [JournalType::Deposit, JournalType::Withdraw], true) && ! $journal->isReversal()
             ? (string) $journal->amount
             : ltrim((string) $line->amount, '-');
+    }
+
+    /**
+     * PGA sheet: SISA WD = KELUAR − POTONGAN, SISA DP = MASUK − POTONGAN,
+     * on that kind of row only.
+     */
+    protected function sisa(Journal $journal, JournalType $type): ?string
+    {
+        return $journal->type === $type && ! $journal->isReversal()
+            ? bcsub((string) $journal->amount, (string) $journal->fee, 2)
+            : null;
     }
 
     protected function statusColumn(): TextColumn

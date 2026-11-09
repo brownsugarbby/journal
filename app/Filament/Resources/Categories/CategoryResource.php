@@ -15,6 +15,9 @@ use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
 use Filament\Resources\Resource;
+use Filament\Schemas\Components\Section;
+use Filament\Schemas\Components\Utilities\Get;
+use Filament\Schemas\Components\Utilities\Set;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Columns\IconColumn;
@@ -23,6 +26,7 @@ use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Grouping\Group;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Str;
 use UnitEnum;
 
 class CategoryResource extends Resource
@@ -47,19 +51,23 @@ class CategoryResource extends Resource
         // code, type and source stay fixed; name, group and order can change.
         $isAuto = fn (?Category $record): bool => $record?->source === CategorySource::Auto;
 
+        // Only name, group and type up front; the technical fields fill
+        // themselves and sit in a closed section for whoever needs them.
         return $schema
             ->columns(2)
             ->components([
                 TextInput::make('name')
                     ->required()
-                    ->maxLength(255),
-                TextInput::make('code')
-                    ->required()
-                    ->maxLength(50)
-                    ->alphaDash()
-                    ->unique(ignoreRecord: true)
-                    ->dehydrateStateUsing(fn (string $state): string => strtolower($state))
-                    ->disabled($isAuto),
+                    ->maxLength(255)
+                    ->placeholder(__('e.g. Biaya Listrik'))
+                    ->live(onBlur: true)
+                    ->afterStateUpdated(function (?string $state, ?string $old, Get $get, Set $set, ?Category $record): void {
+                        // Code follows the name until someone types their own.
+                        if ($record === null && in_array($get('code'), [null, '', Str::slug((string) $old, '_')], true)) {
+                            $set('code', Str::slug((string) $state, '_'));
+                        }
+                    })
+                    ->columnSpanFull(),
                 Select::make('pl_group')
                     ->label('P&L group')
                     ->options(PlGroup::class)
@@ -70,15 +78,29 @@ class CategoryResource extends Resource
                     ->default(CategoryType::Expense)
                     ->required()
                     ->disabled($isAuto),
-                TextInput::make('sort_order')
-                    ->numeric()
-                    ->integer()
-                    ->default(fn (): int => (int) Category::query()->max('sort_order') + 10)
-                    ->required(),
-                Toggle::make('show_headcount')
-                    ->label('Show headcount "(n Org)"')
-                    ->inline(false),
-                Fields::activeToggle(),
+                Section::make(__('Advanced settings'))
+                    ->description(__('Filled in automatically. Change only if needed.'))
+                    ->collapsed()
+                    ->columnSpanFull()
+                    ->columns(2)
+                    ->schema([
+                        TextInput::make('code')
+                            ->required()
+                            ->maxLength(50)
+                            ->alphaDash()
+                            ->unique(ignoreRecord: true)
+                            ->dehydrateStateUsing(fn (string $state): string => strtolower($state))
+                            ->disabled($isAuto),
+                        TextInput::make('sort_order')
+                            ->numeric()
+                            ->integer()
+                            ->default(fn (): int => (int) Category::query()->max('sort_order') + 10)
+                            ->required(),
+                        Toggle::make('show_headcount')
+                            ->label('Show headcount "(n Org)"')
+                            ->inline(false),
+                        Fields::activeToggle(),
+                    ]),
             ]);
     }
 

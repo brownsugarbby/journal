@@ -108,7 +108,9 @@ return [
     |
     */
 
-    'locale' => env('APP_LOCALE', 'id'),
+    // Always Indonesian, whatever the server's .env says (an old APP_LOCALE=en
+    // must not switch the screens back). Tests keep English (phpunit.xml).
+    'locale' => env('APP_ENV') === 'testing' ? env('APP_LOCALE', 'en') : 'id',
 
     'fallback_locale' => env('APP_FALLBACK_LOCALE', 'en'),
 

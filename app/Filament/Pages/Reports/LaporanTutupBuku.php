@@ -2,12 +2,10 @@
 
 namespace App\Filament\Pages\Reports;
 
-use App\Enums\AccountKind;
-use App\Enums\JournalType;
 use App\Filament\Concerns\TranslatesPageLabels;
 use App\Filament\Pages\Reports\Concerns\IsReportPage;
 use App\Models\DailyPanelReport;
-use App\Models\Journal;
+use App\Reports\DailyMoney;
 use App\Reports\ReportColumn;
 use App\Reports\ReportTable;
 use BackedEnum;
@@ -16,6 +14,7 @@ use Filament\Pages\Page;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Contracts\HasTable;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Livewire\Attributes\Url;
@@ -25,11 +24,8 @@ use UnitEnum;
  * REPORT TUTUP BUKU: one row per date of the month, same columns and
  * formulas as the sheet. Money columns come from the journal, panel
  * columns from the Daily Panel Report; the two SELISIH columns show where
- * money and coin do not match.
+ * money and coin do not match. Money formulas: see DailyMoney.
  *
- *   TOTAL DP ALL   = TOTAL DP + TOTAL DP PGA
- *   TOTAL WD ALL   = TOTAL WD − TOTAL WD MANUAL
- *   TOTAL IN/OUT   = TOTAL DP ALL − TOTAL WD ALL
  *   FORM BERSIH    = FROM DP − FORM BONUS        (DP side)
  *   FORM BERSIH    = FROM WD − FROM WD MANUAL    (WD side)
  */
@@ -66,35 +62,23 @@ class LaporanTutupBuku extends Page implements HasTable
         $start = $this->monthStart();
         $end = $start->isSameMonth(today()) ? today() : $start->copy()->endOfMonth();
 
-        $money = $this->moneyByDay($start->toDateString(), $start->copy()->endOfMonth()->toDateString());
+        $money = DailyMoney::byDay($start->toDateString(), $start->copy()->endOfMonth()->toDateString(), $this->brandModel()?->id);
         $panel = $this->panelByDay($start->toDateString(), $start->copy()->endOfMonth()->toDateString());
 
         $rows = [];
 
         foreach (CarbonPeriod::create($start, $end) as $date) {
             $d = $date->toDateString();
-            $m = $money->get($d);
+            $m = $money->get($d) ?? DailyMoney::empty();
             $p = $panel->get($d);
 
-            $dp = (string) ($m->dp_bank ?? 0);
-            $dpPga = (string) ($m->dp_pga ?? 0);
-            $wd = (string) ($m->wd ?? 0);
-            $wdManual = (string) ($m->wd_manual ?? 0);
-            $dpAll = bcadd($dp, $dpPga, 2);
-            $wdAll = bcsub($wd, $wdManual, 2);
             $formBersihDp = $p && $p->from_dp !== null ? bcsub((string) $p->from_dp, (string) ($p->form_bonus ?? 0), 2) : null;
             $formBersihWd = $p && $p->from_wd !== null ? bcsub((string) $p->from_wd, (string) ($p->from_wd_manual ?? 0), 2) : null;
 
             $row = [
                 'tanggal' => $date->format('d-m-Y'),
                 'new_member' => $p->new_member ?? null,
-                'dp' => $dp,
-                'dp_pga' => $dpPga,
-                'dp_all' => $dpAll,
-                'wd' => $wd,
-                'wd_manual' => $wdManual,
-                'wd_all' => $wdAll,
-                'in_out' => bcsub($dpAll, $wdAll, 2),
+                ...Arr::except($m, 'bonus_manual'),
                 'winlose' => $p->winlose ?? null,
                 'turnover' => $p->turnover ?? null,
                 'from_dp' => $p->from_dp ?? null,
@@ -103,9 +87,9 @@ class LaporanTutupBuku extends Page implements HasTable
                 'from_wd' => $p->from_wd ?? null,
                 'from_wd_manual' => $p->from_wd_manual ?? null,
                 'form_bersih_wd' => $formBersihWd,
-                'bonus_manual' => (string) ($m->bonus ?? 0),
-                'selisih_dp' => $p && $p->from_dp !== null ? bcsub($dpAll, (string) $p->from_dp, 2) : null,
-                'selisih_wd' => $formBersihWd !== null ? bcsub($wdAll, $formBersihWd, 2) : null,
+                'bonus_manual' => $m['bonus_manual'],
+                'selisih_dp' => $p && $p->from_dp !== null ? bcsub($m['dp_all'], (string) $p->from_dp, 2) : null,
+                'selisih_wd' => $formBersihWd !== null ? bcsub($m['wd_all'], $formBersihWd, 2) : null,
             ];
 
             $row['_warn'] = array_values(array_filter(['selisih_dp', 'selisih_wd'], fn (string $key): bool => $row[$key] !== null && bccomp($row[$key], '0', 2) !== 0));
@@ -149,34 +133,6 @@ class LaporanTutupBuku extends Page implements HasTable
             ],
             landscape: true,
         );
-    }
-
-    /**
-     * Journal totals per day: DP on bank vs gateway accounts, WD, manual WD,
-     * bonus + cashback. Voided entries and their reversals are left out.
-     *
-     * @return Collection<string, object>
-     */
-    protected function moneyByDay(string $from, string $to): Collection
-    {
-        $gateway = AccountKind::Gateway->value;
-
-        return Journal::query()
-            ->leftJoin('company_accounts as ca', 'ca.id', '=', 'journals.company_account_id')
-            ->whereNull('journals.voided_at')
-            ->whereNull('journals.reversal_of_id')
-            ->whereDate('journals.entry_date', '>=', $from)
-            ->whereDate('journals.entry_date', '<=', $to)
-            ->when($this->brandModel(), fn (Builder $query, $brand) => $query->where('journals.brand_id', $brand->id))
-            ->groupBy(DB::raw('date(journals.entry_date)'))
-            ->selectRaw('date(journals.entry_date) as day')
-            ->selectRaw("sum(case when journals.type = ? and ca.kind <> '{$gateway}' then journals.amount else 0 end) as dp_bank", [JournalType::Deposit->value])
-            ->selectRaw("sum(case when journals.type = ? and ca.kind = '{$gateway}' then journals.amount else 0 end) as dp_pga", [JournalType::Deposit->value])
-            ->selectRaw('sum(case when journals.type = ? then journals.amount else 0 end) as wd', [JournalType::Withdraw->value])
-            ->selectRaw('sum(case when journals.type = ? and journals.is_manual = 1 then journals.amount else 0 end) as wd_manual', [JournalType::Withdraw->value])
-            ->selectRaw('sum(case when journals.type in (?, ?) then journals.amount else 0 end) as bonus', [JournalType::Bonus->value, JournalType::Cashback->value])
-            ->get()
-            ->keyBy('day');
     }
 
     /**
