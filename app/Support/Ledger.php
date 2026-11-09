@@ -76,7 +76,11 @@ class Ledger
             ->select('journals.*')
             ->selectRaw(
                 'cast(? as decimal(20,2)) + sum(coalesce(cp.idr_amount, 0)) over (order by journals.id) as running_total',
-                [(string) LoanCounterparty::query()->sum('opening_balance')],
+                // Openings in rupiah: a dollar loan's opening at today's kurs.
+                [LoanCounterparty::query()->with('currency')->get()->reduce(
+                    fn (string $sum, LoanCounterparty $counterparty): string => bcadd($sum, $counterparty->idrValue((string) $counterparty->opening_balance) ?? '0', 2),
+                    '0',
+                )],
             );
 
         return Journal::query()->fromSub($inner, 'journals');
@@ -84,7 +88,7 @@ class Ledger
 
     /**
      * One partner's journals with `running_total` = their money in the
-     * business (opening + capital − prive).
+     * business (opening + capital − prive), in the partner's currency.
      *
      * @return Builder<Journal>
      */
@@ -97,7 +101,7 @@ class Ledger
                 ->where('pl.ledgerable_id', $partner->id))
             ->select('journals.*')
             ->selectRaw(
-                'cast(? as decimal(20,2)) - sum(pl.idr_amount) over (order by journals.id) as running_total',
+                'cast(? as decimal(20,2)) - sum(pl.'.($partner->isForeign() ? 'amount' : 'idr_amount').') over (order by journals.id) as running_total',
                 [(string) $partner->opening_balance],
             );
 

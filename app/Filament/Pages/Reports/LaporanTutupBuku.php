@@ -88,17 +88,16 @@ class LaporanTutupBuku extends Page implements HasTable
                 'from_wd_manual' => $p->from_wd_manual ?? null,
                 'form_bersih_wd' => $formBersihWd,
                 'bonus_manual' => $m['bonus_manual'],
-                'selisih_dp' => $p && $p->from_dp !== null ? bcsub($m['dp_all'], (string) $p->from_dp, 2) : null,
-                'selisih_wd' => $formBersihWd !== null ? bcsub($m['wd_all'], $formBersihWd, 2) : null,
+                ...DailyMoney::differences($m, $p->from_dp ?? null, $p->form_bonus ?? null, $p->from_wd ?? null, $p->from_wd_manual ?? null),
             ];
 
-            $row['_warn'] = array_values(array_filter(['selisih_dp', 'selisih_wd'], fn (string $key): bool => $row[$key] !== null && bccomp($row[$key], '0', 2) !== 0));
+            $row['_warn'] = array_values(array_filter(DailyMoney::DIFFERENCES, fn (string $key): bool => $row[$key] !== null && bccomp($row[$key], '0', 2) !== 0));
             $rows[] = $row;
         }
 
-        $sumKeys = ['new_member', 'dp', 'dp_pga', 'dp_all', 'wd', 'wd_manual', 'wd_all', 'in_out', 'winlose', 'turnover', 'from_dp', 'form_bonus', 'form_bersih_dp', 'from_wd', 'from_wd_manual', 'form_bersih_wd', 'bonus_manual', 'selisih_dp', 'selisih_wd'];
+        $sumKeys = ['new_member', 'dp', 'dp_pga', 'dp_all', 'wd', 'wd_manual', 'wd_all', 'in_out', 'winlose', 'turnover', 'from_dp', 'form_bonus', 'form_bersih_dp', 'from_wd', 'from_wd_manual', 'form_bersih_wd', 'bonus_manual', ...DailyMoney::DIFFERENCES];
         $total = ReportTable::totalRow($rows, $sumKeys, 'tanggal');
-        $total['_warn'] = array_values(array_filter(['selisih_dp', 'selisih_wd'], fn (string $key): bool => bccomp((string) $total[$key], '0', 2) !== 0));
+        $total['_warn'] = array_values(array_filter(DailyMoney::DIFFERENCES, fn (string $key): bool => bccomp((string) $total[$key], '0', 2) !== 0));
         $rows[] = $total;
 
         return new ReportTable(
@@ -125,11 +124,12 @@ class LaporanTutupBuku extends Page implements HasTable
                 ReportColumn::money('bonus_manual', 'Bonus manual'),
                 ReportColumn::money('selisih_dp', 'Selisih DP'),
                 ReportColumn::money('selisih_wd', 'Selisih WD'),
+                ReportColumn::money('selisih_bonus', 'Selisih bonus'),
             ],
             rows: $rows,
             notes: [
-                __('Money columns from the jurnal (voided entries excluded). TOTAL DP = bank, TOTAL DP PGA = payment gateway (MASUK, before POTONGAN). Bonus manual = bonus + cashback entered in the jurnal.'),
-                __('Panel columns from the Daily Panel Report. Selisih DP = DP all − From DP; Selisih WD = WD all − Form bersih (WD). Red = money and panel do not match.'),
+                __('Money columns from the jurnal (voided entries excluded). TOTAL DP = bank, TOTAL DP PGA = payment gateway (MASUK, before POTONGAN). TOTAL WD MANUAL = WD ticked "WD manual"; it is left out of TOTAL WD ALL. Bonus manual = bonus + cashback entered in the jurnal.'),
+                __('Panel columns from the Daily Panel Report. Selisih DP = DP all − From DP; Selisih WD = WD all − Form bersih (WD); Selisih bonus = Bonus manual − Form bonus. Red = money and panel do not match.'),
             ],
             landscape: true,
         );

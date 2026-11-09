@@ -64,6 +64,34 @@ class PayItem extends Model
     }
 
     /**
+     * The reasons behind POTONG (absen, terlambat…), when given.
+     *
+     * @return HasMany<PayItemDeduction, $this>
+     */
+    public function deductions(): HasMany
+    {
+        return $this->hasMany(PayItemDeduction::class)->orderBy('id');
+    }
+
+    /**
+     * Replace the POTONG breakdown; POTONG becomes its total.
+     *
+     * @param  array<int, array{kind: string, amount: mixed, note?: string|null}>  $lines
+     */
+    public function setDeductions(array $lines): void
+    {
+        $lines = array_values(array_filter($lines, fn (array $line): bool => is_numeric($line['amount'] ?? null) && (float) $line['amount'] > 0));
+
+        $this->deductions()->delete();
+
+        foreach ($lines as $line) {
+            $this->deductions()->create(['kind' => $line['kind'], 'amount' => $line['amount'], 'note' => $line['note'] ?? null]);
+        }
+
+        $this->update(['potong' => array_reduce($lines, fn (string $sum, array $line): string => bcadd($sum, (string) $line['amount'], 2), '0')]);
+    }
+
+    /**
      * @return HasMany<PayItemValue, $this>
      */
     public function values(): HasMany

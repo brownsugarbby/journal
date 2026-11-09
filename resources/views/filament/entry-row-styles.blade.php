@@ -32,6 +32,13 @@
         white-space: nowrap;
     }
 
+    /* Dashboard stat cards: big rupiah figures shrink with the card instead
+       of running past its edge. */
+    .fi-wi-stats-overview-stat-value {
+        font-size: clamp(1.25rem, 2.4vw, 1.875rem);
+        overflow-wrap: anywhere;
+    }
+
     .fi-opening-row {
         display: flex;
         flex-wrap: wrap;

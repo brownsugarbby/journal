@@ -45,7 +45,7 @@ class PeriodService
             $check = $lastChecks->get($account->id);
 
             if ($check && ! $check->isMatching()) {
-                $blockers[] = __(':account: last Cek Saldo has a selisih of :amount.', ['account' => $account->label, 'amount' => number_format((float) $check->difference, 2, ',', '.')]);
+                $blockers[] = __(':account: last Cek Saldo has a selisih of :amount.', ['account' => $account->label, 'amount' => rtrim(rtrim(number_format((float) $check->difference, 2, ',', '.'), '0'), ',')]);
             } elseif (! $check) {
                 $warnings[] = __(':account: never checked with Cek Saldo.', ['account' => $account->label]);
             }
@@ -64,9 +64,11 @@ class PeriodService
                 ->whereMonth('report_date', $period->month)
                 ->whereNotNull('from_dp')
                 ->count();
+            // One row per day per active game panel (one per day without panels).
+            $expected = $days * max(1, $brand->gamePanels()->where('is_active', true)->count());
 
-            if ($filled < $days) {
-                $warnings[] = __('Daily Panel Report :brand: :days day(s) without figures.', ['brand' => $brand->code, 'days' => $days - $filled]);
+            if ($filled < $expected) {
+                $warnings[] = __('Daily Panel Report :brand: :days day(s) without figures.', ['brand' => $brand->code, 'days' => $expected - $filled]);
             }
         }
 

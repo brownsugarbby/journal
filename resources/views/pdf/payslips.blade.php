@@ -67,7 +67,11 @@
                 </tr>
             @endforeach
             @if ((float) $item->potong > 0)
-                <tr><td>Potong</td><td class="v">− {{ $fmt($item->potong) }}</td></tr>
+                @forelse ($item->deductions as $line)
+                    <tr><td>Potong: {{ $line->kind->getLabel() }}{{ $line->note ? " ({$line->note})" : "" }}</td><td class="v">− {{ $fmt($line->amount) }}</td></tr>
+                @empty
+                    <tr><td>Potong</td><td class="v">− {{ $fmt($item->potong) }}</td></tr>
+                @endforelse
             @endif
             @if ((float) $item->loan_repayment > 0)
                 <tr><td>Bayar pinjaman</td><td class="v">− {{ $fmt($item->loan_repayment) }}</td></tr>

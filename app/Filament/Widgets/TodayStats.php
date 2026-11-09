@@ -45,8 +45,8 @@ class TodayStats extends StatsOverviewWidget
         $net = bcsub($dp, $wd, 2);
 
         $stats = [
-            Stat::make(__('DP'), Fields::rupiah($dp))->description(($totals->dp_count ?? 0).' entries')->color('success'),
-            Stat::make(__('WD'), Fields::rupiah($wd))->description(($totals->wd_count ?? 0).' entries')->color('danger'),
+            Stat::make(__('DP'), Fields::rupiah($dp))->description(__(':count entries', ['count' => $totals->dp_count ?? 0]))->color('success'),
+            Stat::make(__('WD'), Fields::rupiah($wd))->description(__(':count entries', ['count' => $totals->wd_count ?? 0]))->color('danger'),
             Stat::make(__('DP − WD'), Fields::rupiah($net))->color(bccomp($net, '0', 2) < 0 ? 'danger' : 'success'),
         ];
 

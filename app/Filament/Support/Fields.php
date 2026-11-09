@@ -38,6 +38,39 @@ class Fields
     }
 
     /**
+     * A number with decimals typed the Indonesian way (1.250,5): kurs, baht,
+     * dollars. Shown with dots while typing, stored as 1250.5.
+     */
+    public static function decimal(string $name, int $decimals = 2): TextInput
+    {
+        return TextInput::make($name)
+            ->mask(RawJs::make("\$money(\$input, ',', '.', {$decimals})"))
+            ->formatStateUsing(fn ($state) => is_numeric($state) ? rtrim(rtrim(number_format((float) $state, $decimals, ',', '.'), '0'), ',') : $state)
+            ->mutateStateForValidationUsing(fn ($state) => self::parseDecimal($state))
+            ->dehydrateStateUsing(fn ($state) => self::parseDecimal($state))
+            ->rule('numeric')
+            ->inputMode('decimal');
+    }
+
+    /**
+     * "1.250,5" → 1250.5; empty → null.
+     */
+    public static function parseDecimal(mixed $state): mixed
+    {
+        if (! is_string($state)) {
+            return $state;
+        }
+
+        $state = str_replace(['.', ','], ['', '.'], trim($state));
+
+        if ($state === '' || $state === '-') {
+            return null;
+        }
+
+        return is_numeric($state) ? $state + 0 : $state;
+    }
+
+    /**
      * "1.250.000" (as typed) → 1250000; empty → null; anything else is left
      * for the numeric rule to reject.
      */

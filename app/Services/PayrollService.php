@@ -149,16 +149,20 @@ class PayrollService
     }
 
     /**
-     * The account a currency is normally paid from: the first active pusat or
-     * cash account in that currency (e.g. CASH THB for baht).
+     * The account a currency is normally paid from: an active pusat or cash
+     * account in that currency (e.g. CASH THB for baht).
      */
     public function defaultAccount(Currency $currency): ?CompanyAccount
     {
+        // The pusat account holding the most money, so the dialog does not
+        // open on an empty account.
         return CompanyAccount::query()
             ->where('is_active', true)
             ->where('tier', AccountTier::Pusat)
             ->where('currency_id', $currency->id)
             ->orderBy('label')
+            ->get()
+            ->sortByDesc(fn (CompanyAccount $account): float => (float) $account->balance())
             ->first();
     }
 
@@ -285,8 +289,14 @@ class PayrollService
                     throw ValidationException::withMessages(['accounts' => __(':employee has a loan repayment but no loan counterparty.', ['employee' => $item->employee->name])]);
                 }
 
+                if ($counterparty->isForeign() && $counterparty->currency_id !== $item->currency_id) {
+                    throw ValidationException::withMessages(['accounts' => __(':employee\'s loan is in :currency: repay it from a :currency pay run.', ['employee' => $item->employee->name, 'currency' => $counterparty->currencyCode()])]);
+                }
+
                 $repaid = $idr((string) $item->loan_repayment);
-                $lines[] = [$counterparty, bcmul($repaid, '-1', 2), bcmul($repaid, '-1', 2)];
+                // A dollar / baht loan keeps its balance in that currency.
+                $units = $counterparty->isForeign() ? (string) $item->loan_repayment : $repaid;
+                $lines[] = [$counterparty, bcmul($units, '-1', 2), bcmul($repaid, '-1', 2)];
             }
         }
 

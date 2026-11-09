@@ -50,10 +50,10 @@ class PendingTasks extends Widget
                 ->where('brand_id', $brand->id)
                 ->whereDate('report_date', $yesterday)
                 ->whereNotNull('from_dp')
-                ->exists();
+                ->count();
 
-            if (! $filled) {
-                $tasks[] = ['text' => "Daily Panel Report {$brand->code} for {$yesterday->format('d/m')} not entered", 'url' => DailyPanelReportPage::getUrl(['brand' => $brand->id, 'month' => $yesterday->format('Y-m')])];
+            if ($filled < max(1, $brand->gamePanels()->where('is_active', true)->count())) {
+                $tasks[] = ['text' => __('Daily Panel Report :brand for :date not entered', ['brand' => $brand->code, 'date' => $yesterday->format('d/m')]), 'url' => DailyPanelReportPage::getUrl(['brand' => $brand->id, 'month' => $yesterday->format('Y-m')])];
             }
         }
 

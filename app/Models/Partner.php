@@ -2,12 +2,12 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\HoldsCurrency;
 use App\Models\Concerns\LogsMasterDataActivity;
 use App\Policies\MasterDataPolicy;
 use Illuminate\Database\Eloquent\Attributes\Guarded;
 use Illuminate\Database\Eloquent\Attributes\UsePolicy;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
 
 /**
@@ -17,6 +17,7 @@ use Illuminate\Database\Eloquent\Relations\MorphMany;
 #[UsePolicy(MasterDataPolicy::class)]
 class Partner extends Model
 {
+    use HoldsCurrency;
     use LogsMasterDataActivity;
 
     protected function casts(): array
@@ -26,14 +27,6 @@ class Partner extends Model
             'opening_balance' => 'decimal:2',
             'is_active' => 'boolean',
         ];
-    }
-
-    /**
-     * @return BelongsTo<Currency, $this>
-     */
-    public function currency(): BelongsTo
-    {
-        return $this->belongsTo(Currency::class);
     }
 
     /**
@@ -50,6 +43,6 @@ class Partner extends Model
      */
     public function balance(): string
     {
-        return bcsub((string) $this->opening_balance, (string) ($this->lines()->sum('idr_amount') ?: '0'), 2);
+        return bcsub((string) $this->opening_balance, $this->movements(), 2);
     }
 }

@@ -7,6 +7,7 @@ use App\Filament\Support\Fields;
 use App\Filament\Support\MoneyInputColumn;
 use App\Models\Brand;
 use App\Models\DailyPanelReport;
+use App\Models\GamePanel;
 use App\Models\Period;
 use App\Models\User;
 use App\Reports\DailyMoney;
@@ -60,6 +61,13 @@ class DailyPanelReportPage extends Page implements HasTable
     public ?string $month = null;
 
     /**
+     * The game panel shown when the brand has more than one: each panel gets
+     * its own row per day.
+     */
+    #[Url]
+    public ?string $panel = null;
+
+    /**
      * @var array<string, SupportCollection<string, array<string, string>>>
      */
     protected array $moneyCache = [];
@@ -81,19 +89,66 @@ class DailyPanelReportPage extends Page implements HasTable
         }
 
         $this->month = $this->monthDate()->format('Y-m');
+        $this->pickPanel();
         $this->ensureRows();
     }
 
     public function updatedActiveTab(): void
     {
-        $this->resetPage();
+        $this->pickPanel();
         $this->ensureRows();
+        // Columns depend on the brand's panels: rebuild the table built at boot.
+        $this->resetTable();
+    }
+
+    public function updatedPanel(): void
+    {
+        $this->pickPanel();
+        $this->ensureRows();
+        $this->resetTable();
     }
 
     public function updatedMonth(): void
     {
         $this->resetPage();
         $this->ensureRows();
+    }
+
+    /**
+     * Active game panels of the brand on screen.
+     *
+     * @return Collection<int, GamePanel>
+     */
+    protected function panels(): Collection
+    {
+        return GamePanel::query()
+            ->where('brand_id', (int) $this->activeTab)
+            ->where('is_active', true)
+            ->orderBy('name')
+            ->get();
+    }
+
+    protected function pickPanel(): void
+    {
+        $panels = $this->panels();
+
+        if (! $panels->contains('id', (int) $this->panel)) {
+            $this->panel = $panels->isEmpty() ? null : (string) $panels->first()->id;
+        }
+    }
+
+    protected function panelId(): ?int
+    {
+        return filled($this->panel) ? (int) $this->panel : null;
+    }
+
+    /**
+     * The rows cover the whole brand (no panels, or just one), so the jurnal
+     * totals and the selisih can sit next to them.
+     */
+    protected function rowsAreWholeBrand(): bool
+    {
+        return $this->panels()->count() <= 1;
     }
 
     /**
@@ -123,11 +178,23 @@ class DailyPanelReportPage extends Page implements HasTable
 
         $start = $this->monthDate();
         $end = $start->isSameMonth(today()) ? today() : $start->copy()->endOfMonth();
-
-        $existing = DailyPanelReport::query()
+        $rows = fn () => DailyPanelReport::query()
             ->where('brand_id', (int) $this->activeTab)
             ->whereDate('report_date', '>=', $start)
-            ->whereDate('report_date', '<=', $end)
+            ->whereDate('report_date', '<=', $end);
+
+        // A brand that just got its one panel: its earlier rows (no panel)
+        // become that panel's, so the figures already typed stay on screen.
+        if ($this->panelId() !== null && $this->panels()->count() === 1) {
+            $taken = $rows()->where('game_panel_id', $this->panelId())->pluck('report_date')->map(fn (Carbon $date): string => $date->toDateString());
+
+            $rows()->whereNull('game_panel_id')->get()
+                ->reject(fn (DailyPanelReport $row): bool => $taken->contains($row->report_date->toDateString()))
+                ->each(fn (DailyPanelReport $row) => $row->update(['game_panel_id' => $this->panelId()]));
+        }
+
+        $existing = $rows()
+            ->where('game_panel_id', $this->panelId())
             ->pluck('report_date')
             ->map(fn (Carbon $date): string => $date->toDateString());
 
@@ -136,6 +203,7 @@ class DailyPanelReportPage extends Page implements HasTable
                 DailyPanelReport::query()->create([
                     'report_date' => $date->toDateString(),
                     'brand_id' => (int) $this->activeTab,
+                    'game_panel_id' => $this->panelId(),
                 ]);
             }
         }
@@ -158,6 +226,14 @@ class DailyPanelReportPage extends Page implements HasTable
                     ->native()
                     ->selectablePlaceholder(false)
                     ->live(),
+                Select::make('panel')
+                    ->label('Game panel')
+                    ->options(fn (): array => $this->panels()->pluck('name', 'id')->all())
+                    ->native()
+                    ->selectablePlaceholder(false)
+                    ->live()
+                    ->visible(fn (): bool => $this->panels()->count() > 1)
+                    ->helperText(__('One row per panel per day. Jurnal totals and selisih per brand: Laporan Tutup Buku.')),
             ]),
             Tabs::make('Brands')
                 ->key('brands')
@@ -188,6 +264,7 @@ class DailyPanelReportPage extends Page implements HasTable
         return $table
             ->query(fn (): Builder => DailyPanelReport::query()
                 ->where('brand_id', (int) $this->activeTab)
+                ->where('game_panel_id', $this->panelId())
                 ->whereDate('report_date', '>=', $start)
                 ->whereDate('report_date', '<=', $start->copy()->endOfMonth()))
             ->columns([
@@ -219,6 +296,9 @@ class DailyPanelReportPage extends Page implements HasTable
                     ->color('gray')
                     ->alignEnd(),
                 $this->moneyColumn('bonus_manual', 'Bonus manual'),
+                $this->differenceColumn('selisih_dp', 'Selisih DP'),
+                $this->differenceColumn('selisih_wd', 'Selisih WD'),
+                $this->differenceColumn('selisih_bonus', 'Selisih bonus'),
                 TextColumn::make('updated_by')
                     ->label('Op')
                     ->formatStateUsing(fn ($state) => User::query()->find($state)?->username)
@@ -251,7 +331,27 @@ class DailyPanelReportPage extends Page implements HasTable
             ->formatStateUsing(fn ($state) => Fields::rupiah($state))
             ->color('gray')
             ->alignEnd()
-            ->visible(fn (): bool => $this->user()->hasFullAccess());
+            ->visible(fn (): bool => $this->user()->hasFullAccess() && $this->rowsAreWholeBrand());
+    }
+
+    /**
+     * Jurnal vs panel for the day (DailyMoney::differences), red when not 0,
+     * empty until the panel figure is typed.
+     */
+    protected function differenceColumn(string $key, string $label): TextColumn
+    {
+        return TextColumn::make($key)
+            ->label($label)
+            ->state(function (DailyPanelReport $record) use ($key): ?string {
+                $money = $this->moneyByDay()->get($record->report_date->toDateString()) ?? DailyMoney::empty();
+
+                return DailyMoney::differences($money, $record->from_dp, $record->form_bonus, $record->from_wd, $record->from_wd_manual)[$key];
+            })
+            ->formatStateUsing(fn ($state) => Fields::rupiah($state))
+            ->color(fn ($state): string => $state !== null && bccomp((string) $state, '0', 2) !== 0 ? 'danger' : 'gray')
+            ->weight('bold')
+            ->alignEnd()
+            ->visible(fn (): bool => $this->user()->hasFullAccess() && $this->rowsAreWholeBrand());
     }
 
     /**

@@ -4,16 +4,9 @@ namespace App\Providers\Filament;
 
 use App\Filament\Auth\EditProfile;
 use App\Filament\Auth\Login;
-use App\Filament\Pages\DailyPanelReportPage;
 use App\Filament\Pages\Jurnal;
 use App\Filament\Pages\Pusat;
-use App\Filament\Pages\Reports\HitungBersih;
-use App\Filament\Pages\Reports\LaporanTutupBuku;
-use App\Filament\Resources\Brands\BrandResource;
-use App\Filament\Resources\Categories\CategoryResource;
-use App\Filament\Resources\Companies\CompanyResource;
-use App\Filament\Resources\Employees\EmployeeResource;
-use App\Filament\Resources\PayRuns\PayRunResource;
+use App\Filament\Support\Menu;
 use App\Filament\Support\MenuSearch;
 use App\Support\AppSettings;
 use Filament\Http\Middleware\Authenticate;
@@ -21,8 +14,6 @@ use Filament\Http\Middleware\AuthenticateSession;
 use Filament\Http\Middleware\DisableBladeIconComponents;
 use Filament\Http\Middleware\DispatchServingFilamentEvent;
 use Filament\Navigation\NavigationBuilder;
-use Filament\Navigation\NavigationGroup;
-use Filament\Navigation\NavigationItem;
 use Filament\Pages\Dashboard;
 use Filament\Panel;
 use Filament\PanelProvider;
@@ -37,7 +28,7 @@ use Illuminate\Cookie\Middleware\EncryptCookies;
 use Illuminate\Foundation\Http\Middleware\PreventRequestForgery;
 use Illuminate\Routing\Middleware\SubstituteBindings;
 use Illuminate\Session\Middleware\StartSession;
-use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\View\Middleware\ShareErrorsFromSession;
 
@@ -58,11 +49,16 @@ class AdminPanelProvider extends PanelProvider
             ->colors([
                 'primary' => self::primaryPalette(),
             ])
-            ->navigation(fn (NavigationBuilder $builder): NavigationBuilder => self::menu($builder))
+            ->navigation(fn (NavigationBuilder $builder): NavigationBuilder => Menu::build($builder))
             // Menu across the top (dropdown per group) so the wide sheets get the
             // whole screen; phones and small tablets get the usual menu drawer.
             ->topNavigation()
             ->globalSearch(MenuSearch::class)
+            // Filament shows the search box only to users who may open a
+            // searchable list; staff have none, so render it for them here.
+            ->renderHook(PanelsRenderHook::GLOBAL_SEARCH_AFTER, fn (): string => filament()->isGlobalSearchEnabled()
+                ? ''
+                : Blade::render('@livewire(\\Filament\\Livewire\\GlobalSearch::class)'))
             ->maxContentWidth(Width::Full)
             ->renderHook(PanelsRenderHook::STYLES_AFTER, fn (): View => view('filament.entry-row-styles'))
             ->renderHook(
@@ -95,44 +91,6 @@ class AdminPanelProvider extends PanelProvider
             ->authMiddleware([
                 Authenticate::class,
             ]);
-    }
-
-    /**
-     * The only pages in the menu, as H D asked (2026-11-09), for every role.
-     * The other pages still exist and open by their link (/admin/jurnal,
-     * /admin/users, /admin/settings…); add a class here to bring one back.
-     *
-     * @var list<class-string>
-     */
-    public const MENU = [
-        DailyPanelReportPage::class,
-        LaporanTutupBuku::class,
-        HitungBersih::class,
-        BrandResource::class,
-        CompanyResource::class,
-        CategoryResource::class,
-        PayRunResource::class,
-        EmployeeResource::class,
-    ];
-
-    /**
-     * MENU in the usual groups, leaving out what the user may not open.
-     */
-    private static function menu(NavigationBuilder $builder): NavigationBuilder
-    {
-        $groupOrder = array_map(__(...), ['Jurnal', 'Laporan', 'Master Data', 'People', 'Settings']);
-
-        $items = collect(self::MENU)
-            ->filter(fn (string $class): bool => $class::canAccess())
-            ->flatMap(fn (string $class): array => $class::getNavigationItems())
-            ->sortBy(fn (NavigationItem $item): int => $item->getSort());
-
-        return $builder->groups($items
-            ->groupBy(fn (NavigationItem $item): string => (string) $item->getGroup())
-            ->sortBy(fn (Collection $items, string $group): int => array_search($group, $groupOrder, true) ?: 0)
-            ->map(fn (Collection $items, string $group): NavigationGroup => NavigationGroup::make($group)->items($items->values()->all()))
-            ->values()
-            ->all());
     }
 
     /**

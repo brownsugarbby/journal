@@ -3,9 +3,11 @@
 namespace App\Filament\Resources\PayRuns\Pages;
 
 use App\Enums\PayColumnKind;
+use App\Enums\PayDeductionKind;
 use App\Enums\PayType;
 use App\Filament\Concerns\TranslatesPageLabels;
 use App\Filament\Resources\PayRuns\PayRunResource;
+use App\Filament\Support\Fields;
 use App\Filament\Support\MoneyInputColumn;
 use App\Models\CompanyAccount;
 use App\Models\Currency;
@@ -17,6 +19,7 @@ use App\Services\PayrollService;
 use App\Support\PayrollPdf;
 use Filament\Actions\Action;
 use Filament\Forms\Components\DatePicker;
+use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Notifications\Notification;
@@ -182,14 +185,14 @@ class PayRunSheet extends Page implements HasTable
                             }
 
                             $balance = $account->balance();
-                            $text .= ' · balance '.number_format((float) $balance, $currency->decimals, ',', '.');
+                            $text .= ' · '.__('balance :amount', ['amount' => number_format((float) $balance, $currency->decimals, ',', '.')]);
 
                             if (! $currency->is_base) {
                                 $kurs = $account->averageKurs();
                                 $text .= ' · kurs '.($kurs ? rtrim(rtrim(number_format((float) $kurs, 4, ',', '.'), '0'), ',') : __('none yet'));
                             }
 
-                            return $text.(bccomp($balance, (string) $needed, 2) < 0 ? ' · NOT ENOUGH' : '');
+                            return $text.(bccomp($balance, (string) $needed, 2) < 0 ? ' · '.__('NOT ENOUGH') : '');
                         });
                 })->all(),
             ])
@@ -217,7 +220,7 @@ class PayRunSheet extends Page implements HasTable
         return $table
             ->query(fn (): Builder => PayItem::query()
                 ->where('pay_run_id', $this->record->id)
-                ->with(['employee.company', 'employee.bank', 'currency', 'values.payColumn']))
+                ->with(['employee.company', 'employee.bank', 'currency', 'values.payColumn', 'deductions']))
             ->columns([
                 TextColumn::make('employee.company.short_code')->label('PT')->badge(),
                 TextColumn::make('employee.position')->label('Jabatan')->placeholder('-'),
@@ -229,7 +232,12 @@ class PayRunSheet extends Page implements HasTable
                     ->toggleable(),
                 ...$this->customColumns(),
                 $this->amountCell('gross', $isGaji ? 'Gaji' : 'UM full'),
-                $this->amountCell('potong', 'Potong'),
+                $this->amountCell('potong', 'Potong')
+                    // With a breakdown, POTONG is its total: change it there.
+                    ->disabled(fn (PayItem $record): bool => $this->isLocked() || $record->deductions->isNotEmpty())
+                    ->tooltip(fn (PayItem $record): ?string => $record->deductions->isNotEmpty()
+                        ? $record->deductions->map(fn ($line): string => $line->kind->getLabel().' '.number_format((float) $line->amount, 0, ',', '.'))->join(', ')
+                        : __('Type a total, or use "Potong" for a breakdown')),
                 $this->amountCell('loan_repayment', 'Pinjaman')
                     ->tooltip(__('Loan repayment deducted from pay (needs a Loan Counterparty linked to the employee)')),
                 TextColumn::make('sisa')
@@ -248,6 +256,7 @@ class PayRunSheet extends Page implements HasTable
                     ->afterStateUpdated(fn () => $this->refreshTotals()),
             ])
             ->recordActions([
+                $this->deductionsAction(),
                 Action::make('payslip')
                     ->label('Slip')
                     ->icon(Heroicon::OutlinedDocumentArrowDown)
@@ -269,6 +278,59 @@ class PayRunSheet extends Page implements HasTable
             ->paginated(false)
             ->emptyStateHeading(__('No employees on this sheet'))
             ->emptyStateDescription(__('Add employees with a Gaji / UM amount on People → Employees, then use "Add new employees".'));
+    }
+
+    /**
+     * POTONG line by line (absen, terlambat, denda…): the total goes into
+     * POTONG and SISA follows; the payslip lists each line.
+     */
+    protected function deductionsAction(): Action
+    {
+        return Action::make('deductions')
+            ->label('Potong')
+            ->icon(Heroicon::OutlinedMinusCircle)
+            ->color('gray')
+            ->visible(fn (): bool => ! $this->isLocked())
+            ->modalHeading(fn (PayItem $record): string => __('Potong: :name', ['name' => $record->employee->name]))
+            ->modalDescription(fn (PayItem $record): string => __(':pay :amount. Kasbon or a loan goes in the Pinjaman column instead.', [
+                'pay' => $this->record->pay_type === PayType::Gaji ? 'Gaji' : 'UM full',
+                'amount' => number_format((float) $record->gross, $record->currency->decimals, ',', '.'),
+            ]))
+            ->fillForm(fn (PayItem $record): array => [
+                'lines' => $record->deductions->map(fn ($line): array => [
+                    'kind' => $line->kind->value,
+                    'amount' => (float) $line->amount,
+                    'note' => $line->note,
+                ])->all() ?: [['kind' => PayDeductionKind::Absen->value, 'amount' => null, 'note' => null]],
+            ])
+            ->schema([
+                Repeater::make('lines')
+                    ->hiddenLabel()
+                    ->schema([
+                        Select::make('kind')->label('Jenis')->options(PayDeductionKind::class)->native()->required(),
+                        Fields::money('amount')->label('Jumlah')->required(),
+                        TextInput::make('note')->label('Keterangan')->placeholder(__('e.g. 2 days absent'))->maxLength(255),
+                    ])
+                    ->columns(3)
+                    ->addActionLabel(__('Add a line'))
+                    ->defaultItems(1),
+            ])
+            ->action(function (PayItem $record, array $data, Action $action): void {
+                $total = collect($data['lines'] ?? [])->reduce(fn (string $sum, array $line): string => bcadd($sum, (string) ($line['amount'] ?? 0), 2), '0');
+
+                if (bccomp($total, (string) $record->gross, 2) > 0) {
+                    Notification::make()->title(__('Potong is more than the pay itself.'))->danger()->send();
+                    $action->halt();
+                }
+
+                $record->setDeductions($data['lines'] ?? []);
+                $this->refreshTotals();
+
+                Notification::make()
+                    ->title(__('Potong :amount saved', ['amount' => number_format((float) $record->potong, $record->currency->decimals, ',', '.')]))
+                    ->success()
+                    ->send();
+            });
     }
 
     protected function amountCell(string $name, string $label): TextInputColumn

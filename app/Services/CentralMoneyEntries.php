@@ -113,11 +113,27 @@ class CentralMoneyEntries
     {
         $value = $sign > 0 ? $amount : $this->neg($amount);
         $idr = $this->idr($account, $value);
+        // A dollar / baht loan or partner keeps its balance in that currency.
+        $otherUnits = $other instanceof LoanCounterparty || $other instanceof Partner
+            ? ($other->isForeign() ? $this->neg($value) : $this->neg($idr))
+            : $this->neg($idr);
 
         return [
             [$account, $value, $idr],
-            [$other, $this->neg($idr), $this->neg($idr)],
+            [$other, $otherUnits, $this->neg($idr)],
         ];
+    }
+
+    /**
+     * A USD loan / partner is paid from and into a USD account.
+     */
+    private function requireSameCurrency(CompanyAccount $account, LoanCounterparty|Partner $other): void
+    {
+        if ($other->isForeign() && $account->currency_id !== $other->currency_id) {
+            throw ValidationException::withMessages([
+                'company_account_id' => __(':name is in :currency: pick a :currency account.', ['name' => $other->name, 'currency' => $other->currencyCode()]),
+            ]);
+        }
     }
 
     /**
@@ -258,6 +274,10 @@ class CentralMoneyEntries
 
         $kind = $this->enum(LoanKind::class, $data['kind'] ?? null, 'kind');
 
+        if ($kind !== LoanKind::InterestPaid) {
+            $this->requireSameCurrency($account, $counterparty);
+        }
+
         if ($kind->sign() < 0) {
             $this->requireKurs($account);
         }
@@ -284,6 +304,7 @@ class CentralMoneyEntries
         }
 
         $kind = $this->enum(PartnerKind::class, $data['kind'] ?? null, 'kind');
+        $this->requireSameCurrency($account, $partner);
         $this->requireKurs($account);
 
         return [

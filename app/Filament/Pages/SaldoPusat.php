@@ -130,12 +130,12 @@ class SaldoPusat extends Page implements HasTable
             'grandTotalIdr' => $currencyTotals->reduce(fn (string $sum, array $total) => bcadd($sum, $total['idr'], 2), '0'),
             'monthLabel' => today()->translatedFormat('F Y'),
             'expenseTotal' => $period ? (string) (Ledger::expenses($period->id)->sum('idr_value') ?: '0') : '0',
-            'loans' => LoanCounterparty::query()->orderBy('name')->get()
-                ->map(fn (LoanCounterparty $counterparty): array => ['name' => $counterparty->name, 'balance' => $counterparty->balance()])
+            'loans' => LoanCounterparty::query()->with('currency')->orderBy('name')->get()
+                ->map(fn (LoanCounterparty $counterparty): array => ['name' => $counterparty->name, 'balance' => $counterparty->balance(), 'currency' => $counterparty->currencyCode()])
                 ->reject(fn (array $loan): bool => bccomp($loan['balance'], '0', 2) === 0)
                 ->values(),
             'partners' => Partner::query()->where('is_active', true)->orderBy('name')->get()
-                ->map(fn (Partner $partner): array => ['name' => $partner->name, 'balance' => $partner->balance()]),
+                ->map(fn (Partner $partner): array => ['name' => $partner->name, 'balance' => $partner->balance(), 'currency' => $partner->currencyCode()]),
         ];
     }
 

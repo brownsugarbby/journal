@@ -56,7 +56,7 @@ class TutupBuku extends Page implements HasTable
     public function content(Schema $schema): Schema
     {
         return $schema->components([
-            Text::make('A month opens by itself with its first entry. Close it once it has ended and every account matches its Cek Saldo: nothing dated in a closed month can be added, edited, voided or paid. Next month carries on from the closing balances.')
+            Text::make(__('A month opens by itself with its first entry. Close it once it has ended and every account matches its Cek Saldo: nothing dated in a closed month can be added, edited, voided or paid. Next month carries on from the closing balances.'))
                 ->color('gray'),
             EmbeddedTable::make(),
         ]);
@@ -127,8 +127,8 @@ class TutupBuku extends Page implements HasTable
         }
 
         return new HtmlString(
-            ($checks['blockers'] ? '<strong>Fix these first:</strong><ul style="margin: .25rem 0 .75rem 1rem; list-style: disc">'.$list($checks['blockers'], 'danger').'</ul>' : '')
-            .($checks['warnings'] ? '<strong>Please check:</strong><ul style="margin: .25rem 0 0 1rem; list-style: disc">'.$list($checks['warnings'], 'warning').'</ul>' : '')
+            ($checks['blockers'] ? '<strong>'.e(__('Fix these first:')).'</strong><ul style="margin: .25rem 0 .75rem 1rem; list-style: disc">'.$list($checks['blockers'], 'danger').'</ul>' : '')
+            .($checks['warnings'] ? '<strong>'.e(__('Please check:')).'</strong><ul style="margin: .25rem 0 0 1rem; list-style: disc">'.$list($checks['warnings'], 'warning').'</ul>' : '')
         );
     }
 

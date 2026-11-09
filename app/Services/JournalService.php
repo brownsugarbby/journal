@@ -217,7 +217,9 @@ class JournalService
         $attributes = [
             'entry_date' => $entryDate->toDateString(),
             'note' => filled($data['note'] ?? null) ? trim($data['note']) : null,
-            'is_manual' => (bool) ($data['is_manual'] ?? false),
+            // WD MANUAL: a withdrawal done by hand outside the normal WD flow; the
+            // recap keeps it out of TOTAL WD ALL (sheet: WD ALL = WD − WD MANUAL).
+            'is_manual' => $type === JournalType::Withdraw && (bool) ($data['is_manual'] ?? false),
             'member_bank_id' => $data['member_bank_id'] ?? null,
             'member_account_name' => filled($data['member_account_name'] ?? null) ? trim($data['member_account_name']) : null,
         ];

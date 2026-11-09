@@ -91,19 +91,20 @@ class LaporanPosisiSaldo extends Page implements HasTable
         $rows[] = ['nama' => 'TOTAL SALDO (Rp)', 'rp' => $grandIdr, '_style' => 'total'];
 
         $rows[] = ['nama' => 'Pinjaman (> 0 owed to us, < 0 we owe)', '_style' => 'section'];
-        foreach (LoanCounterparty::query()->orderBy('name')->get() as $counterparty) {
+        foreach (LoanCounterparty::query()->with('currency')->orderBy('name')->get() as $counterparty) {
             $sum = $sums["{$counterparty->getMorphClass()}:{$counterparty->id}"] ?? null;
-            $outstanding = bcadd((string) $counterparty->opening_balance, (string) ($sum->idr ?? 0), 2);
+            $outstanding = bcadd((string) $counterparty->opening_balance, (string) (($counterparty->isForeign() ? $sum?->units : $sum?->idr) ?? 0), 2);
 
             if (bccomp($outstanding, '0', 2) !== 0) {
-                $rows[] = ['nama' => $counterparty->name, 'cur' => 'IDR', 'rp' => $outstanding];
+                $rows[] = ['nama' => $counterparty->name, 'cur' => $counterparty->currencyCode(), 'saldo' => $counterparty->isForeign() ? $outstanding : null, 'rp' => $counterparty->idrValue($outstanding)];
             }
         }
 
         $rows[] = ['nama' => 'Partner (modal − prive)', '_style' => 'section'];
-        foreach (Partner::query()->orderBy('name')->get() as $partner) {
+        foreach (Partner::query()->with('currency')->orderBy('name')->get() as $partner) {
             $sum = $sums["{$partner->getMorphClass()}:{$partner->id}"] ?? null;
-            $rows[] = ['nama' => $partner->name, 'cur' => 'IDR', 'rp' => bcsub((string) $partner->opening_balance, (string) ($sum->idr ?? 0), 2)];
+            $balance = bcsub((string) $partner->opening_balance, (string) (($partner->isForeign() ? $sum?->units : $sum?->idr) ?? 0), 2);
+            $rows[] = ['nama' => $partner->name, 'cur' => $partner->currencyCode(), 'saldo' => $partner->isForeign() ? $balance : null, 'rp' => $partner->idrValue($balance)];
         }
 
         return new ReportTable(

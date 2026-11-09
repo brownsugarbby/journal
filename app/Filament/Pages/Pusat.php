@@ -14,6 +14,7 @@ use App\Filament\Concerns\TranslatesPageLabels;
 use App\Filament\Pages\Concerns\WorksWithJournals;
 use App\Filament\Support\Fields;
 use App\Models\Category;
+use App\Models\Company;
 use App\Models\CompanyAccount;
 use App\Models\ExpenseStatus;
 use App\Models\Journal;
@@ -396,8 +397,8 @@ class Pusat extends Page implements HasTable
     protected function purchaseFields(): array
     {
         $recalculate = function (Get $get, Set $set): void {
-            $units = $get('foreign_amount');
-            $kurs = $get('kurs');
+            $units = Fields::parseDecimal($get('foreign_amount'));
+            $kurs = Fields::parseDecimal($get('kurs'));
 
             if (is_numeric($units) && is_numeric($kurs)) {
                 $set('amount', Fields::rupiah(round((float) $units * (float) $kurs)));
@@ -410,17 +411,15 @@ class Pusat extends Page implements HasTable
                 ->options(fn (): array => $this->accountOptions(fn (Builder $query) => $query->whereHas('currency', fn (Builder $query) => $query->where('is_base', true))))
                 ->native()
                 ->required()),
-            TextInput::make('foreign_amount')
+            Fields::decimal('foreign_amount')
                 ->label(fn (): string => 'Jumlah '.$this->account()->currency->code)
-                ->numeric()
                 ->minValue(0.01)
                 ->required()
                 ->live(onBlur: true)
                 ->afterStateUpdated($recalculate)
                 ->extraInputAttributes(['data-entry-focus' => true]),
-            TextInput::make('kurs')
+            Fields::decimal('kurs', 4)
                 ->label('Kurs (Rp)')
-                ->numeric()
                 ->minValue(0.000001)
                 ->required()
                 ->live(onBlur: true)
@@ -469,6 +468,10 @@ class Pusat extends Page implements HasTable
                 ->options(fn (): array => $this->user()->accessibleBrands()->pluck('code', 'id')->all())
                 ->native()
                 ->placeholder(__('Shared')),
+            Select::make('company_id')->label('PT')
+                ->options(fn (): array => Company::query()->where('is_active', true)->orderBy('short_code')->pluck('short_code', 'id')->all())
+                ->native()
+                ->placeholder(__('None')),
             $this->saveButton(),
         ];
     }
@@ -488,7 +491,8 @@ class Pusat extends Page implements HasTable
                 ->required()
                 ->extraInputAttributes(['data-entry-focus' => true])),
             Select::make('kind')->label('Jenis')->options(LoanKind::class)->native()->required(),
-            Fields::money('amount')->label('Jumlah')->required(),
+            // In the paying account's currency: dollars for a USD loan.
+            Fields::decimal('amount')->label('Jumlah')->required(),
             Select::make('company_account_id')->label('Akun')->options(fn (): array => $this->accountOptions())->native()->required(),
             $this->wide(TextInput::make('note')->label('Keterangan')->maxLength(500)),
             $this->saveButton(),
@@ -506,7 +510,7 @@ class Pusat extends Page implements HasTable
             $this->dateField(),
             Select::make('kind')->label('Jenis')->options(PartnerKind::class)->native()->required()
                 ->extraInputAttributes(['data-entry-focus' => true]),
-            Fields::money('amount')->label('Jumlah')->required(),
+            Fields::decimal('amount')->label('Jumlah')->required(),
             $this->wide(Select::make('company_account_id')->label('Akun')->options(fn (): array => $this->accountOptions())->native()->required()),
             $this->wide(TextInput::make('note')->label('Keterangan')->maxLength(500)),
             $this->saveButton(),
@@ -694,7 +698,7 @@ class Pusat extends Page implements HasTable
 
         return $table
             ->query(fn (): Builder => Ledger::expenses($period?->id ?? 0)
-                ->with(['companyAccount', 'category', 'brand', 'createdBy', 'expenseStatus'])
+                ->with(['companyAccount', 'category', 'brand', 'company', 'createdBy', 'expenseStatus'])
                 ->when(! $this->user()->hasFullAccess(), fn (Builder $query) => $this->limitToStaffRows($query, 'entry_date', 'created_by')))
             ->columns([
                 TextColumn::make('entry_date')->label('Tgl')->date('d/m/Y'),
@@ -712,6 +716,7 @@ class Pusat extends Page implements HasTable
                     ->disabled(fn (Journal $record): bool => $record->isVoided() || $record->isReversal() || ! $record->period->isOpen()
                         || (! $this->user()->hasFullAccess() && $record->created_by !== $this->user()->id)),
                 TextColumn::make('brand.code')->label('Web')->badge()->placeholder(__('Shared')),
+                TextColumn::make('company.short_code')->label('PT')->placeholder('-'),
                 TextColumn::make('created_at')->label('Waktu')->dateTime('d/m H:i'),
                 TextColumn::make('createdBy.username')->label('Op'),
                 $this->statusBadge(fn (Journal $record): Journal => $record),

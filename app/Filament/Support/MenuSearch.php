@@ -2,7 +2,6 @@
 
 namespace App\Filament\Support;
 
-use Filament\Facades\Filament;
 use Filament\GlobalSearch\GlobalSearchResult;
 use Filament\GlobalSearch\GlobalSearchResults;
 use Filament\GlobalSearch\Providers\Contracts\GlobalSearchProvider;
@@ -20,9 +19,7 @@ class MenuSearch implements GlobalSearchProvider
     {
         $words = array_filter(explode(' ', Str::lower(trim($query))));
 
-        $results = collect([...Filament::getPages(), ...Filament::getResources()])
-            ->filter(fn (string $class): bool => $class::shouldRegisterNavigation() && $class::canAccess())
-            ->flatMap(fn (string $class): array => $class::getNavigationItems())
+        $results = Menu::accessibleItems()
             ->filter(function (NavigationItem $item) use ($words): bool {
                 $haystack = Str::lower((string) $item->getLabel().' '.$item->getGroup());
 

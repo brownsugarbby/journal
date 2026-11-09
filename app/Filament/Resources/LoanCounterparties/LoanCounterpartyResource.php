@@ -57,8 +57,12 @@ class LoanCounterpartyResource extends Resource
                 Fields::activeRelation('partner_id', 'partner', 'name')
                     ->label('Partner')
                     ->visible(fn (Get $get): bool => CompanyAccountResource::is($get('type'), LoanCounterpartyType::Partner)),
+                Fields::activeRelation('currency_id', 'currency', 'code')
+                    ->label('Currency')
+                    ->placeholder('IDR')
+                    ->helperText(__('A dollar / baht loan keeps its balance in that currency and is paid from an account in it.')),
                 Fields::money('opening_balance', allowNegative: true)
-                    ->label('Opening balance (Rp)')
+                    ->label('Opening balance')
                     ->default(0)
                     ->required()
                     ->helperText(__('Outstanding at go-live: positive = they owe us, negative = we owe them.')),
@@ -84,6 +88,7 @@ class LoanCounterpartyResource extends Resource
                     ->label('Linked to')
                     ->state(fn (LoanCounterparty $record): ?string => $record->employee?->name ?? $record->partner?->name)
                     ->placeholder('-'),
+                TextColumn::make('currency.code')->label('Currency')->placeholder('IDR'),
                 TextColumn::make('opening_balance')->label('Opening')->numeric(0, ',', '.')->alignEnd(),
                 TextColumn::make('interest_rate')->label('Bunga')->suffix(' %')->placeholder('-'),
                 Fields::activeColumn(),

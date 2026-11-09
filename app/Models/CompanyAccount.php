@@ -223,4 +223,21 @@ class CompanyAccount extends Model
 
         return ['type' => $type, 'value' => $value];
     }
+
+    /**
+     * POTONGAN in rupiah for a DP ('dp') or WD ('wd') of $amount, from
+     * feeFor(): flat as is, percent of the amount rounded to whole rupiah.
+     */
+    public function defaultFee(string $direction, string $amount): ?string
+    {
+        $fee = $this->feeFor($direction);
+
+        if ($fee === null || $fee['type'] === null || ! is_numeric($fee['value']) || ! is_numeric($amount)) {
+            return null;
+        }
+
+        return $fee['type'] === FeeType::Percent
+            ? number_format(round((float) $amount * (float) $fee['value'] / 100), 2, '.', '')
+            : number_format((float) $fee['value'], 2, '.', '');
+    }
 }

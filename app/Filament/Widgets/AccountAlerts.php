@@ -69,13 +69,13 @@ class AccountAlerts extends TableWidget
             }
 
             if ($account->isOverMax($balance)) {
-                $issues[] = 'Over max: transfer ke pusat';
+                $issues[] = __('Over max balance: transfer to pusat.');
             }
 
             $check = $lastChecks->get($account->id);
 
             if ($check && ! $check->isMatching()) {
-                $issues[] = 'Selisih '.number_format((float) $check->difference, 0, ',', '.');
+                $issues[] = __('Selisih :amount', ['amount' => number_format((float) $check->difference, 0, ',', '.')]);
             }
 
             if ($issues === []) {

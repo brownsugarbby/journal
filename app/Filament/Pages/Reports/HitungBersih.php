@@ -89,12 +89,12 @@ class HitungBersih extends Page implements HasTable
                     $label .= " ({$headcounts[$category->source_key]} Org)";
                 }
 
-                $lines[] = ['keterangan' => '   • '.$label, 'jumlah' => $amount] + ($group === PlGroup::NotInPl ? ['_style' => 'muted'] : []);
+                $lines[] = ['keterangan' => '   • '.$label, 'rincian' => $amount] + ($group === PlGroup::NotInPl ? ['_style' => 'muted'] : []);
                 $groupTotal = bcadd($groupTotal, $amount, 2);
             }
 
             $groupTotals[$group->value] = $groupTotal;
-            $rows[] = ['keterangan' => $group === PlGroup::NotInPl ? __('Not in P&L (info)') : $group->getLabel(), 'jumlah' => $groupTotal, '_style' => 'section'];
+            $rows[] = ['keterangan' => $group === PlGroup::NotInPl ? __('Not in P&L (info)') : $group->getLabel(), 'total' => $groupTotal, '_style' => 'section'];
             array_push($rows, ...$lines);
         }
 
@@ -105,23 +105,26 @@ class HitungBersih extends Page implements HasTable
         );
 
         array_push($rows,
-            ['keterangan' => 'REKAPAN', 'jumlah' => null, '_style' => 'section'],
-            ['keterangan' => 'Pendapatan Kotor', 'jumlah' => $groupTotals[PlGroup::Pendapatan->value]],
-            ['keterangan' => 'Biaya Tetap', 'jumlah' => bcmul($groupTotals[PlGroup::BiayaTetap->value], '-1', 2)],
-            ['keterangan' => 'Biaya Variable', 'jumlah' => bcmul($groupTotals[PlGroup::BiayaVariable->value], '-1', 2)],
-            ['keterangan' => 'LABA BERSIH', 'jumlah' => $profit, '_style' => 'total'] + (bccomp($profit, '0', 2) < 0 ? ['_warn' => ['jumlah']] : []),
+            ['keterangan' => 'REKAPAN', '_style' => 'section'],
+            ['keterangan' => 'Pendapatan Kotor', 'total' => $groupTotals[PlGroup::Pendapatan->value]],
+            ['keterangan' => 'Biaya Tetap', 'total' => bcmul($groupTotals[PlGroup::BiayaTetap->value], '-1', 2)],
+            ['keterangan' => 'Biaya Variable', 'total' => bcmul($groupTotals[PlGroup::BiayaVariable->value], '-1', 2)],
+            ['keterangan' => 'LABA BERSIH', 'total' => $profit, '_style' => 'total'] + (bccomp($profit, '0', 2) < 0 ? ['_warn' => ['total']] : []),
         );
 
         return new ReportTable(
             title: 'Hitung Bersih',
             subtitle: ($this->brandModel() ? substr($this->brandModel()->code, 0, 1).' ' : '').strtoupper($start->translatedFormat('F Y')).' · '.$this->brandLabel(),
             columns: [
+                // Like the sheet's columns C and D: each line, then the group total (Q20).
                 ReportColumn::text('keterangan', 'Keterangan'),
-                ReportColumn::money('jumlah', 'Jumlah (Rp)'),
+                ReportColumn::money('rincian', 'Rincian (Rp)'),
+                ReportColumn::money('total', 'Total (Rp)'),
             ],
             rows: $rows,
             notes: array_filter([
-                __('LABA BERSIH = Pendapatan Kotor − Biaya Tetap − Biaya Variable. "Not in P&L" lines (bonus, cashback, selisih kurs, penyesuaian) are shown for information and are not in the profit until H D confirms where they belong.'),
+                __('LABA BERSIH = Pendapatan Kotor − Biaya Tetap − Biaya Variable. Pendapatan Kotor = DP − WD members actually paid in and out.'),
+                __('Not in the profit, shown for information: bonus and cashback (coins; their cost is already in Pendapatan Kotor when the member withdraws), buying dollars / baht (money changes currency; the cost counts when it is spent, e.g. Perpanjang Live Chat paid from the dollar account), selisih kurs and penyesuaian saldo.'),
                 $this->brandModel() ? __('Per brand: only entries tagged with this brand. Shared costs (no WEB / brand) appear in the consolidated view only.') : null,
             ]),
         );

@@ -4,6 +4,7 @@ namespace App\Filament\Pages;
 
 use App\Enums\AccountKind;
 use App\Enums\BonusKind;
+use App\Enums\FeeType;
 use App\Enums\JournalType;
 use App\Filament\Concerns\TranslatesPageLabels;
 use App\Filament\Pages\Concerns\WorksWithJournals;
@@ -21,6 +22,7 @@ use App\Services\JournalService;
 use App\Support\Ledger;
 use BackedEnum;
 use Filament\Actions\Action;
+use Filament\Forms\Components\Checkbox;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Select;
@@ -48,6 +50,7 @@ use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\HtmlString;
@@ -449,10 +452,16 @@ class Jurnal extends Page implements HasTable
                 ->label('Nama rekening')
                 ->maxLength(255)
                 ->extraInputAttributes(['data-entry-focus' => true])),
-            Fields::money('keluar')->label('Keluar (WD)'),
-            Fields::money('masuk')->label('Masuk (DP)'),
+            Fields::money('keluar')->label('Keluar (WD)')
+                ->live(onBlur: true)
+                ->afterStateUpdated(fn (Get $get, Set $set) => $this->prefillFee($get, $set)),
+            Fields::money('masuk')->label('Masuk (DP)')
+                ->live(onBlur: true)
+                ->afterStateUpdated(fn (Get $get, Set $set) => $this->prefillFee($get, $set)),
             Fields::money('fee')
                 ->label('Potongan')
+                // In a tooltip, so the entry row keeps one line of labels.
+                ->hintIcon(Heroicon::OutlinedInformationCircle, tooltip: fn (): ?string => $this->feeHint())
                 ->visible(fn (): bool => $this->isGateway()),
             $this->memberField(),
             Select::make('member_bank_id')
@@ -461,8 +470,59 @@ class Jurnal extends Page implements HasTable
                     ->mapWithKeys(fn (Bank $bank): array => [$bank->id => $bank->short_name ?: $bank->name])->all())
                 ->native(),
             $this->wide(TextInput::make('note')->label('Keterangan')->maxLength(500)),
+            Checkbox::make('is_manual')
+                ->label('WD manual')
+                ->hintIcon(Heroicon::OutlinedInformationCircle, tooltip: __('Tick for a WD done by hand outside the normal WD flow (not a member payout).')),
             $this->saveButton(),
         ];
+    }
+
+    /**
+     * POTONGAN follows the gateway's fee for the side being typed (DP fee
+     * for MASUK, WD fee for KELUAR) until staff type their own figure.
+     */
+    protected function prefillFee(Get $get, Set $set): void
+    {
+        $account = $this->account();
+
+        if (! $this->isGateway() || ! $account) {
+            return;
+        }
+
+        $masuk = Fields::parseMoney($get('masuk'));
+        $keluar = Fields::parseMoney($get('keluar'));
+        $amount = is_numeric($masuk) && $masuk > 0 ? [$masuk, 'dp'] : (is_numeric($keluar) && $keluar > 0 ? [$keluar, 'wd'] : null);
+        $current = Fields::parseMoney($get('fee'));
+
+        // Leave a figure staff typed themselves.
+        if (filled($current) && (string) $current !== (string) ($get('fee_auto') ?? '')) {
+            return;
+        }
+
+        $fee = $amount ? $account->defaultFee($amount[1], (string) $amount[0]) : null;
+        $fee = $fee === null ? null : (int) round((float) $fee);
+
+        $set('fee', $fee === null ? null : Fields::rupiah($fee));
+        $set('fee_auto', $fee === null ? null : (string) $fee);
+    }
+
+    protected function feeHint(): ?string
+    {
+        $account = $this->account();
+        $dp = $account?->feeFor('dp');
+        $wd = $account?->feeFor('wd');
+
+        if (! $dp && ! $wd) {
+            return null;
+        }
+
+        $describe = fn (?array $fee): string => match (true) {
+            $fee === null || $fee['type'] === null => '-',
+            $fee['type'] === FeeType::Percent => rtrim(rtrim((string) $fee['value'], '0'), '.').'%',
+            default => Fields::rupiah($fee['value']),
+        };
+
+        return __('Auto: DP :dp · WD :wd', ['dp' => $describe($dp), 'wd' => $describe($wd)]);
     }
 
     /**
@@ -613,8 +673,13 @@ class Jurnal extends Page implements HasTable
         $sheet = $this->sheet();
 
         if ($sheet && $sheet['kind'] === 'account' && $this->isSharedAccount()) {
+            // Shared accounts: keep the brand picked for the last row; with no
+            // last row, only pre-pick it when the user has a single brand, so a
+            // KES deposit is never booked under JALU by default.
             $brands = $this->user()->accessibleBrands()->pluck('id');
-            $defaults['brand_id'] = $brands->contains($previous['brand_id'] ?? null) ? $previous['brand_id'] : $brands->first();
+            $defaults['brand_id'] = $brands->contains($previous['brand_id'] ?? null)
+                ? $previous['brand_id']
+                : ($brands->count() === 1 ? $brands->first() : null);
         }
 
         if ($sheet && $sheet['kind'] === 'cashback') {
@@ -673,9 +738,13 @@ class Jurnal extends Page implements HasTable
             ]);
         }
 
+        if ($masuk && ($data['is_manual'] ?? false)) {
+            throw ValidationException::withMessages(['entry.is_manual' => __('WD manual is only for KELUAR (WD).')]);
+        }
+
         return [
             $masuk ? JournalType::Deposit : JournalType::Withdraw,
-            [...$data, 'company_account_id' => $this->account()->id, 'amount' => $masuk ? $data['masuk'] : $data['keluar']],
+            [...Arr::except($data, 'fee_auto'), 'company_account_id' => $this->account()->id, 'amount' => $masuk ? $data['masuk'] : $data['keluar']],
             $masuk ? 'masuk' : 'keluar',
         ];
     }
@@ -916,6 +985,7 @@ class Jurnal extends Page implements HasTable
             'winlose' => $journal->winlose !== null ? (int) $journal->winlose : null,
             'percentage' => $journal->percentage,
             'note' => $journal->note,
+            'is_manual' => (bool) $journal->is_manual,
         ];
     }
 
@@ -934,6 +1004,7 @@ class Jurnal extends Page implements HasTable
                 Fields::money('fee')->label('Potongan')->visible($journal->companyAccount?->kind === AccountKind::Gateway),
                 Select::make('member_bank_id')->label('Bank')->options(Bank::query()->where('is_active', true)->orderBy('name')->pluck('name', 'id'))->native(),
                 TextInput::make('note')->label('Keterangan')->maxLength(500),
+                Checkbox::make('is_manual')->label('WD manual')->visible($journal->type === JournalType::Withdraw),
             ],
             JournalType::Bonus => [
                 ...$common,

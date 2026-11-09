@@ -106,7 +106,6 @@ class MasterDataSeeder extends Seeder
             ['konsor_idn', 'Konsor IDN', PlGroup::BiayaTetap, $expense, 110, null, false],
             ['gaji_staff', 'Gaji Staff', PlGroup::BiayaTetap, $expense, 120, 'payroll.gaji', true],
             ['um', 'UM', PlGroup::BiayaTetap, $expense, 130, 'payroll.um', true],
-            ['beli_dollar', 'Beli Dollar', PlGroup::BiayaTetap, $expense, 140, null, false],
             ['tagihan_mess', 'Tagihan Mess, Listrik & Air', PlGroup::BiayaTetap, $expense, 150, null, false],
             ['biaya_adm', 'Biaya ADM', PlGroup::BiayaTetap, $expense, 300, null, false],
             ['bunga', 'Bunga', PlGroup::BiayaTetap, $expense, 310, 'loan.interest', false],
@@ -119,7 +118,11 @@ class MasterDataSeeder extends Seeder
             ['bayar_utang_pindahan', 'Bayar Utang Pindahan', PlGroup::BiayaVariable, $expense, 450, null, false],
             ['operasional_lainnya', 'Biaya Operasional Lainnya', PlGroup::BiayaVariable, $expense, 460, null, false],
 
-            // Not on the sheet's P&L yet (open question Q22).
+            // Outside the P&L. Bonus / cashback are coins: the cost shows up when
+            // the member withdraws (WD lowers Pendapatan Kotor), so counting them
+            // again would count it twice (Q22). Buying dollars swaps money; the
+            // cost is the spending from the dollar account (Q21).
+            ['beli_dollar', 'Beli Dollar (pindah ke valas)', PlGroup::NotInPl, $expense, 890, null, false],
             ['bonus_member', 'Bonus Member', PlGroup::NotInPl, $expense, 900, 'journal.bonus', false],
             ['cashback_member', 'Cashback Member', PlGroup::NotInPl, $expense, 910, 'journal.cashback', false],
             ['selisih_kurs', 'Selisih Kurs', PlGroup::NotInPl, $expense, 920, 'fx.difference', false],
@@ -128,6 +131,7 @@ class MasterDataSeeder extends Seeder
 
         foreach ($categories as [$code, $name, $group, $type, $sort, $sourceKey, $headcount]) {
             Category::query()->firstOrCreate(['code' => $code], [
+                'is_active' => $code !== 'beli_dollar',
                 'name' => $name,
                 'pl_group' => $group,
                 'type' => $type,
@@ -223,7 +227,7 @@ class MasterDataSeeder extends Seeder
     private function expenseStatuses(): void
     {
         // Placeholders until H D confirms the STATUS values (Q8).
-        foreach ([['Pending', 'warning', 10], ['Paid', 'success', 20]] as [$name, $color, $sort]) {
+        foreach ([['Belum dibayar', 'warning', 10], ['Lunas', 'success', 20]] as [$name, $color, $sort]) {
             ExpenseStatus::query()->firstOrCreate(['name' => $name], ['color' => $color, 'sort_order' => $sort]);
         }
     }

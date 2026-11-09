@@ -21,6 +21,8 @@ class DailyMoney
 {
     public const KEYS = ['dp', 'dp_pga', 'dp_all', 'wd', 'wd_manual', 'wd_all', 'in_out', 'bonus_manual'];
 
+    public const DIFFERENCES = ['selisih_dp', 'selisih_wd', 'selisih_bonus'];
+
     /**
      * The columns above for every day with entries, keyed by Y-m-d. Voided
      * entries and their reversals are left out.
@@ -48,6 +50,28 @@ class DailyMoney
             ->toBase()
             ->get()
             ->mapWithKeys(fn (object $day): array => [$day->day => self::row($day)]);
+    }
+
+    /**
+     * What must match between the jurnal (money) and the panel (coin), each
+     * null until that panel figure is entered (Q3):
+     *
+     *   Selisih DP    = TOTAL DP ALL − FROM DP              (deposits credited)
+     *   Selisih WD    = TOTAL WD ALL − FORM BERSIH (WD)     (WD manual left out on both sides)
+     *   Selisih bonus = BONUS MANUAL − FORM BONUS           (bonus + cashback given)
+     *
+     * @param  array<string, string>  $money  a byDay() row
+     * @return array<string, string|null>
+     */
+    public static function differences(array $money, mixed $fromDp, mixed $formBonus, mixed $fromWd, mixed $fromWdManual): array
+    {
+        $formBersihWd = $fromWd === null ? null : bcsub((string) $fromWd, (string) ($fromWdManual ?? 0), 2);
+
+        return [
+            'selisih_dp' => $fromDp === null ? null : bcsub($money['dp_all'], (string) $fromDp, 2),
+            'selisih_wd' => $formBersihWd === null ? null : bcsub($money['wd_all'], $formBersihWd, 2),
+            'selisih_bonus' => $formBonus === null ? null : bcsub($money['bonus_manual'], (string) $formBonus, 2),
+        ];
     }
 
     /**

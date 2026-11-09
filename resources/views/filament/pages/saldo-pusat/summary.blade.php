@@ -41,7 +41,8 @@
             <div style="{{ $row }}">
                 <span>{{ $loan['name'] }}</span>
                 <span style="{{ bccomp($loan['balance'], '0', 2) < 0 ? 'color: var(--danger-600)' : '' }}">
-                    {{ bccomp($loan['balance'], '0', 2) < 0 ? __('we owe :amount', ['amount' => Fields::rupiah(ltrim($loan['balance'], '-'))]) : __('owes us :amount', ['amount' => Fields::rupiah($loan['balance'])]) }}
+                    @php($amount = ($loan['currency'] === 'IDR' ? '' : $loan['currency'].' ').Fields::rupiah(ltrim($loan['balance'], '-')))
+                    {{ bccomp($loan['balance'], '0', 2) < 0 ? __('we owe :amount', ['amount' => $amount]) : __('owes us :amount', ['amount' => $amount]) }}
                 </span>
             </div>
         @empty
@@ -54,7 +55,7 @@
         @forelse ($partners as $partner)
             <div style="{{ $row }}">
                 <span>{{ $partner['name'] }}</span>
-                <span>{{ Fields::rupiah($partner['balance']) }}</span>
+                <span>{{ ($partner['currency'] === 'IDR' ? '' : $partner['currency'].' ').Fields::rupiah($partner['balance']) }}</span>
             </div>
         @empty
             <div style="{{ $muted }}">{{ __('No partners') }}</div>

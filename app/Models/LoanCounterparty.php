@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\LoanCounterpartyType;
+use App\Models\Concerns\HoldsCurrency;
 use App\Models\Concerns\LogsMasterDataActivity;
 use App\Policies\MasterDataPolicy;
 use Illuminate\Database\Eloquent\Attributes\Guarded;
@@ -18,6 +19,7 @@ use Illuminate\Database\Eloquent\Relations\MorphMany;
 #[UsePolicy(MasterDataPolicy::class)]
 class LoanCounterparty extends Model
 {
+    use HoldsCurrency;
     use LogsMasterDataActivity;
 
     protected function casts(): array
@@ -55,10 +57,11 @@ class LoanCounterparty extends Model
     }
 
     /**
-     * Outstanding in IDR (opening at go-live + movements): > 0 they owe us, < 0 we owe them.
+     * Outstanding in the loan's currency (opening at go-live + movements):
+     * > 0 they owe us, < 0 we owe them.
      */
     public function balance(): string
     {
-        return bcadd((string) $this->opening_balance, (string) ($this->lines()->sum('idr_amount') ?: '0'), 2);
+        return bcadd((string) $this->opening_balance, $this->movements(), 2);
     }
 }

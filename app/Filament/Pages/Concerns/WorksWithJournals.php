@@ -39,6 +39,7 @@ trait WorksWithJournals
         return match (true) {
             $journal->isVoided() => 'VOID',
             $journal->isReversal() => 'Reversal',
+            (bool) $journal->is_manual => 'WD manual',
             default => null,
         };
     }
