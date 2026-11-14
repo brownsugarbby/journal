@@ -22,9 +22,10 @@ use UnitEnum;
 
 /**
  * REPORT TUTUP BUKU: one row per date of the month, same columns and
- * formulas as the sheet. Money columns come from the journal, panel
- * columns from the Daily Panel Report; the two SELISIH columns show where
- * money and coin do not match. Money formulas: see DailyMoney.
+ * formulas as the sheet. Money columns come from the journal unless typed
+ * on the Daily Panel Report, panel columns from the Daily Panel Report; the
+ * SELISIH columns show where money and coin do not match. Money formulas:
+ * see DailyMoney.
  *
  *   FORM BERSIH    = FROM DP − FORM BONUS        (DP side)
  *   FORM BERSIH    = FROM WD − FROM WD MANUAL    (WD side)
@@ -69,8 +70,9 @@ class LaporanTutupBuku extends Page implements HasTable
 
         foreach (CarbonPeriod::create($start, $end) as $date) {
             $d = $date->toDateString();
-            $m = $money->get($d) ?? DailyMoney::empty();
             $p = $panel->get($d);
+            // Money typed on the Daily Panel Report wins over the jurnal's, column by column.
+            $m = DailyMoney::withTyped($money->get($d) ?? DailyMoney::empty(), $p);
 
             $formBersihDp = $p && $p->from_dp !== null ? bcsub((string) $p->from_dp, (string) ($p->form_bonus ?? 0), 2) : null;
             $formBersihWd = $p && $p->from_wd !== null ? bcsub((string) $p->from_wd, (string) ($p->from_wd_manual ?? 0), 2) : null;
@@ -128,7 +130,7 @@ class LaporanTutupBuku extends Page implements HasTable
             ],
             rows: $rows,
             notes: [
-                __('Money columns from the jurnal (voided entries excluded). TOTAL DP = bank, TOTAL DP PGA = payment gateway (MASUK, before POTONGAN). TOTAL WD MANUAL = WD ticked "WD manual"; it is left out of TOTAL WD ALL. Bonus manual = bonus + cashback entered in the jurnal.'),
+                __('Money columns: as typed on the Daily Panel Report; where left empty, from the jurnal (voided entries excluded): TOTAL DP = bank, TOTAL DP PGA = payment gateway (MASUK, before POTONGAN), TOTAL WD MANUAL = WD ticked "WD manual" (left out of TOTAL WD ALL), Bonus manual = bonus + cashback.'),
                 __('Panel columns from the Daily Panel Report. Selisih DP = DP all − From DP; Selisih WD = WD all − Form bersih (WD); Selisih bonus = Bonus manual − Form bonus. Red = money and panel do not match.'),
             ],
             landscape: true,

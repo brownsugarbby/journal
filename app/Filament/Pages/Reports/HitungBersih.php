@@ -8,9 +8,11 @@ use App\Enums\PlGroup;
 use App\Filament\Concerns\TranslatesPageLabels;
 use App\Filament\Pages\Reports\Concerns\IsReportPage;
 use App\Models\Category;
+use App\Models\DailyPanelReport;
 use App\Models\JournalLine;
 use App\Models\PayItem;
 use App\Models\User;
+use App\Reports\DailyMoney;
 use App\Reports\ReportColumn;
 use App\Reports\ReportTable;
 use BackedEnum;
@@ -18,6 +20,7 @@ use Filament\Pages\Page;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Contracts\HasTable;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Facades\DB;
 use Livewire\Attributes\Url;
 use UnitEnum;
 
@@ -93,6 +96,11 @@ class HitungBersih extends Page implements HasTable
                 $groupTotal = bcadd($groupTotal, $amount, 2);
             }
 
+            if ($group === PlGroup::Pendapatan && bccomp($typed = $this->typedInOut($start->toDateString(), $start->copy()->endOfMonth()->toDateString()), '0', 2) !== 0) {
+                $lines[] = ['keterangan' => '   • '.__('Pendapatan Kotor typed on the Daily Panel Report'), 'rincian' => $typed];
+                $groupTotal = bcadd($groupTotal, $typed, 2);
+            }
+
             $groupTotals[$group->value] = $groupTotal;
             $rows[] = ['keterangan' => $group === PlGroup::NotInPl ? __('Not in P&L (info)') : $group->getLabel(), 'total' => $groupTotal, '_style' => 'section'];
             array_push($rows, ...$lines);
@@ -123,7 +131,7 @@ class HitungBersih extends Page implements HasTable
             ],
             rows: $rows,
             notes: array_filter([
-                __('LABA BERSIH = Pendapatan Kotor − Biaya Tetap − Biaya Variable. Pendapatan Kotor = DP − WD members actually paid in and out.'),
+                __('LABA BERSIH = Pendapatan Kotor − Biaya Tetap − Biaya Variable. Pendapatan Kotor = DP − WD members actually paid in and out: from the jurnal, plus TOTAL IN/OUT typed on the Daily Panel Report for what the jurnal does not hold.'),
                 __('Not in the profit, shown for information: bonus and cashback (coins; their cost is already in Pendapatan Kotor when the member withdraws), buying dollars / baht (money changes currency; the cost counts when it is spent, e.g. Perpanjang Live Chat paid from the dollar account), selisih kurs and penyesuaian saldo.'),
                 $this->brandModel() ? __('Per brand: only entries tagged with this brand. Shared costs (no WEB / brand) appear in the consolidated view only.') : null,
             ]),
@@ -149,6 +157,31 @@ class HitungBersih extends Page implements HasTable
             ->pluck('total', 'category_id')
             ->map(fn ($total): string => (string) $total)
             ->all();
+    }
+
+    /**
+     * TOTAL IN/OUT typed on the Daily Panel Report, as far as it differs from
+     * the jurnal's for the same day: the whole of it while the brand is not
+     * using the jurnal, nothing once typed and jurnal figures agree.
+     */
+    protected function typedInOut(string $from, string $to): string
+    {
+        $jurnal = DailyMoney::byDay($from, $to, $this->brandModel()?->id);
+        $sums = collect(DailyPanelReport::TYPED_MONEY)->map(fn (string $field): string => "sum({$field}) as {$field}")->join(', ');
+
+        return DailyPanelReport::query()
+            ->whereDate('report_date', '>=', $from)
+            ->whereDate('report_date', '<=', $to)
+            ->when($this->brandModel(), fn (Builder $query, $brand) => $query->where('brand_id', $brand->id))
+            ->groupBy(DB::raw('date(report_date)'))
+            ->selectRaw("date(report_date) as day, {$sums}")
+            ->toBase()
+            ->get()
+            ->reduce(function (string $total, object $typed) use ($jurnal): string {
+                $own = $jurnal->get($typed->day) ?? DailyMoney::empty();
+
+                return bcadd($total, bcsub(DailyMoney::withTyped($own, $typed)['in_out'], $own['in_out'], 2), 2);
+            }, '0');
     }
 
     /**

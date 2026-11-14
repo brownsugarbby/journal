@@ -17,7 +17,16 @@ class DailyPanelReport extends Model
 {
     use LogsActivity;
 
-    public const FIGURES = ['new_member', 'winlose', 'turnover', 'from_dp', 'form_bonus', 'from_wd', 'from_wd_manual'];
+    public const FIGURES = [
+        'new_member', 'winlose', 'turnover', 'from_dp', 'form_bonus', 'from_wd', 'from_wd_manual',
+        ...self::TYPED_MONEY,
+    ];
+
+    /**
+     * The sheet's money columns typed by hand (empty = the jurnal's figure),
+     * keyed by DailyMoney's column names.
+     */
+    public const TYPED_MONEY = ['total_dp', 'total_dp_pga', 'total_wd', 'total_wd_manual', 'bonus_manual'];
 
     protected function casts(): array
     {
@@ -30,6 +39,11 @@ class DailyPanelReport extends Model
             'form_bonus' => 'decimal:2',
             'from_wd' => 'decimal:2',
             'from_wd_manual' => 'decimal:2',
+            'total_dp' => 'decimal:2',
+            'total_dp_pga' => 'decimal:2',
+            'total_wd' => 'decimal:2',
+            'total_wd_manual' => 'decimal:2',
+            'bonus_manual' => 'decimal:2',
         ];
     }
 

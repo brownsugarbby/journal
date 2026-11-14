@@ -75,6 +75,30 @@ class DailyMoney
     }
 
     /**
+     * The day's figures when the money columns may also be typed on the
+     * Daily Panel Report: a typed figure wins over the jurnal's, column by
+     * column, and the formulas run on the result.
+     *
+     * @param  array<string, string>  $jurnal  a byDay() row
+     * @param  object|null  $typed  total_dp, total_dp_pga, total_wd, total_wd_manual, bonus_manual (null = not typed)
+     * @return array<string, string>
+     */
+    public static function withTyped(array $jurnal, ?object $typed): array
+    {
+        $pick = fn (string $column, string $key): string => $typed !== null && $typed->{$column} !== null
+            ? bcadd((string) $typed->{$column}, '0', 2)
+            : $jurnal[$key];
+
+        return self::row((object) [
+            'dp_bank' => $pick('total_dp', 'dp'),
+            'dp_pga' => $pick('total_dp_pga', 'dp_pga'),
+            'wd' => $pick('total_wd', 'wd'),
+            'wd_manual' => $pick('total_wd_manual', 'wd_manual'),
+            'bonus' => $pick('bonus_manual', 'bonus_manual'),
+        ]);
+    }
+
+    /**
      * A day without entries: every column 0.
      *
      * @return array<string, string>

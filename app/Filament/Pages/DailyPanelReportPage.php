@@ -21,6 +21,7 @@ use Filament\Schemas\Components\Tabs;
 use Filament\Schemas\Components\Tabs\Tab;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
+use Filament\Tables\Columns\Summarizers\Summarizer;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Columns\TextInputColumn;
 use Filament\Tables\Concerns\InteractsWithTable;
@@ -270,32 +271,22 @@ class DailyPanelReportPage extends Page implements HasTable
             ->columns([
                 TextColumn::make('report_date')->label('Tanggal')->date('d-m-Y')->weight('bold'),
                 $this->cell('new_member', 'New member', integer: true),
-                $this->moneyColumn('dp', 'Total DP'),
-                $this->moneyColumn('dp_pga', 'Total DP PGA'),
-                $this->moneyColumn('dp_all', 'Total DP all'),
-                $this->moneyColumn('wd', 'Total WD'),
-                $this->moneyColumn('wd_manual', 'Total WD manual'),
-                $this->moneyColumn('wd_all', 'Total WD all'),
-                $this->moneyColumn('in_out', 'Total in/out'),
-                $this->cell('winlose', 'Winlose harian', allowNegative: true),
-                $this->cell('turnover', 'Turnover'),
+                $this->typedMoneyCell('total_dp', 'dp', 'Total DP'),
+                $this->typedMoneyCell('total_dp_pga', 'dp_pga', 'Total DP PGA'),
+                $this->formulaColumn('dp_all', 'Total DP all', self::GREEN),
+                $this->typedMoneyCell('total_wd', 'wd', 'Total WD'),
+                $this->typedMoneyCell('total_wd_manual', 'wd_manual', 'Total WD manual'),
+                $this->formulaColumn('wd_all', 'Total WD all', self::GREEN),
+                $this->formulaColumn('in_out', 'Total in/out', self::ORANGE),
+                $this->cell('winlose', 'Winlose harian', allowNegative: true, background: self::YELLOW),
+                $this->cell('turnover', 'Turnover', background: self::YELLOW),
                 $this->cell('from_dp', 'From DP'),
                 $this->cell('form_bonus', 'Form bonus'),
-                TextColumn::make('form_bersih_dp')
-                    ->label('Form bersih')
-                    ->state(fn (DailyPanelReport $record): ?string => $record->formBersihDp())
-                    ->formatStateUsing(fn ($state) => Fields::rupiah($state))
-                    ->color('gray')
-                    ->alignEnd(),
+                $this->formulaColumn('form_bersih_dp', 'Form bersih', self::GREEN),
                 $this->cell('from_wd', 'From WD'),
                 $this->cell('from_wd_manual', 'From WD manual'),
-                TextColumn::make('form_bersih_wd')
-                    ->label('Form bersih')
-                    ->state(fn (DailyPanelReport $record): ?string => $record->formBersihWd())
-                    ->formatStateUsing(fn ($state) => Fields::rupiah($state))
-                    ->color('gray')
-                    ->alignEnd(),
-                $this->moneyColumn('bonus_manual', 'Bonus manual'),
+                $this->formulaColumn('form_bersih_wd', 'Form bersih', self::GREEN),
+                $this->typedMoneyCell('bonus_manual', 'bonus_manual', 'Bonus manual'),
                 $this->differenceColumn('selisih_dp', 'Selisih DP'),
                 $this->differenceColumn('selisih_wd', 'Selisih WD'),
                 $this->differenceColumn('selisih_bonus', 'Selisih bonus'),
@@ -310,48 +301,117 @@ class DailyPanelReportPage extends Page implements HasTable
             ->emptyStateHeading(__('Pick a brand'));
     }
 
-    protected function cell(string $name, string $label, bool $integer = false, bool $allowNegative = false): TextInputColumn
+    // The sheet's colours, light enough for dark mode too.
+    private const GREEN = 'rgb(106 168 79 / 0.16)';
+
+    private const ORANGE = 'rgb(230 145 56 / 0.35)';
+
+    private const YELLOW = 'rgb(255 217 102 / 0.35)';
+
+    protected function cell(string $name, string $label, bool $integer = false, bool $allowNegative = false, ?string $background = null, ?string $totalKey = null): TextInputColumn
     {
+        $totalKey ??= $name;
+
         return MoneyInputColumn::make($name)
             ->label($label)
             ->rules(array_filter(['nullable', 'numeric', $integer ? 'integer' : null, $allowNegative ? null : 'min:0']))
-            ->disabled(fn (): bool => $this->isLocked());
+            ->disabled(fn (): bool => $this->isLocked())
+            ->extraCellAttributes($background ? ['style' => "background: {$background}"] : [])
+            ->summarize(Summarizer::make()->using(fn (): ?string => $this->totals()[$totalKey])->formatStateUsing(fn ($state) => Fields::rupiah($state)));
     }
 
     /**
-     * A read-only money column of the sheet (TOTAL DP … BONUS MANUAL),
-     * summed from the jurnal. Leaders and superadmins only: admins who enter
-     * panel figures do not see the brand's money totals (as in the reports).
+     * TOTAL DP, DP PGA, WD, WD MANUAL, BONUS MANUAL typed like the sheet. Left
+     * empty, the day takes the jurnal's figure (shown faintly in the cell), so
+     * brands that do use the jurnal need not type them.
      */
-    protected function moneyColumn(string $key, string $label): TextColumn
+    protected function typedMoneyCell(string $name, string $key, string $label): TextInputColumn
     {
-        return TextColumn::make("money_{$key}")
-            ->label($label)
-            ->state(fn (DailyPanelReport $record): string => ($this->moneyByDay()->get($record->report_date->toDateString()) ?? DailyMoney::empty())[$key])
-            ->formatStateUsing(fn ($state) => Fields::rupiah($state))
-            ->color('gray')
-            ->alignEnd()
-            ->visible(fn (): bool => $this->user()->hasFullAccess() && $this->rowsAreWholeBrand());
+        // TOTAL sums what the day counts: typed, else the jurnal's.
+        return $this->cell($name, $label, totalKey: $key)
+            ->placeholder(function (DailyPanelReport $record) use ($key): ?string {
+                $jurnal = $this->rowsAreWholeBrand() ? $this->moneyByDay()->get($record->report_date->toDateString()) : null;
+
+                return $jurnal && bccomp($jurnal[$key], '0', 2) !== 0 ? Fields::rupiah($jurnal[$key]) : null;
+            });
     }
 
     /**
-     * Jurnal vs panel for the day (DailyMoney::differences), red when not 0,
+     * The sheet's formula columns: DP ALL = C+D, WD ALL = F−G, IN/OUT = E−H,
+     * FORM BERSIH = L−M and O−P. Calculated, never typed.
+     */
+    protected function formulaColumn(string $key, string $label, string $background): TextColumn
+    {
+        return TextColumn::make($key)
+            ->label($label)
+            ->state(fn (DailyPanelReport $record): ?string => $this->figures($record)[$key])
+            ->formatStateUsing(fn ($state) => Fields::rupiah($state))
+            ->weight('bold')
+            ->alignEnd()
+            ->extraCellAttributes(['style' => "background: {$background}"])
+            ->summarize(Summarizer::make()->using(fn (): ?string => $this->totals()[$key])->formatStateUsing(fn ($state) => Fields::rupiah($state)));
+    }
+
+    /**
+     * Money vs panel for the day (DailyMoney::differences), red when not 0,
      * empty until the panel figure is typed.
      */
     protected function differenceColumn(string $key, string $label): TextColumn
     {
         return TextColumn::make($key)
             ->label($label)
-            ->state(function (DailyPanelReport $record) use ($key): ?string {
-                $money = $this->moneyByDay()->get($record->report_date->toDateString()) ?? DailyMoney::empty();
-
-                return DailyMoney::differences($money, $record->from_dp, $record->form_bonus, $record->from_wd, $record->from_wd_manual)[$key];
-            })
+            ->state(fn (DailyPanelReport $record): ?string => $this->figures($record)[$key])
             ->formatStateUsing(fn ($state) => Fields::rupiah($state))
             ->color(fn ($state): string => $state !== null && bccomp((string) $state, '0', 2) !== 0 ? 'danger' : 'gray')
             ->weight('bold')
             ->alignEnd()
-            ->visible(fn (): bool => $this->user()->hasFullAccess() && $this->rowsAreWholeBrand());
+            ->summarize(Summarizer::make()->using(fn (): ?string => $this->totals()[$key])->formatStateUsing(fn ($state) => Fields::rupiah($state)));
+    }
+
+    /**
+     * Every figure of one row: typed money (or the jurnal's when empty and
+     * the row is the whole brand), the formulas and the selisih.
+     *
+     * @return array<string, string|null>
+     */
+    protected function figures(DailyPanelReport $record): array
+    {
+        $jurnal = $this->rowsAreWholeBrand() ? $this->moneyByDay()->get($record->report_date->toDateString()) : null;
+        $money = DailyMoney::withTyped($jurnal ?? DailyMoney::empty(), $record);
+
+        return [
+            ...$money,
+            'form_bersih_dp' => $record->formBersihDp(),
+            'form_bersih_wd' => $record->formBersihWd(),
+            ...DailyMoney::differences($money, $record->from_dp, $record->form_bonus, $record->from_wd, $record->from_wd_manual),
+        ];
+    }
+
+    /**
+     * The TOTAL row: every column summed over the month on screen.
+     *
+     * @return array<string, string|null>
+     */
+    protected function totals(): array
+    {
+        return once(function (): array {
+            $totals = [];
+
+            foreach ($this->getTableQueryForExport()->get() as $record) {
+                $row = [
+                    ...$this->figures($record),
+                    ...collect(DailyPanelReport::FIGURES)->mapWithKeys(fn (string $field): array => [$field => $record->{$field}])->all(),
+                ];
+
+                foreach ($row as $key => $value) {
+                    if ($value !== null) {
+                        $totals[$key] = bcadd($totals[$key] ?? '0', (string) $value, 2);
+                    }
+                }
+            }
+
+            return $totals + array_fill_keys([...DailyMoney::KEYS, ...DailyMoney::DIFFERENCES, ...DailyPanelReport::FIGURES, 'form_bersih_dp', 'form_bersih_wd'], null);
+        });
     }
 
     /**
