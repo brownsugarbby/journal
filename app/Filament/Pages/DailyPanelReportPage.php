@@ -319,23 +319,29 @@ class DailyPanelReportPage extends Page implements HasTable
             ->label($label)
             ->rules(array_filter(['nullable', 'numeric', $integer ? 'integer' : null, $allowNegative ? null : 'min:0']))
             ->disabled(fn (): bool => $this->isLocked())
+            ->tooltip(fn (): ?string => $this->isLocked() ? __('This month is closed (Tutup Buku). Reopen it to change the figures.') : null)
             ->extraCellAttributes($background ? ['style' => "background: {$background}"] : [])
             ->summarize(Summarizer::make()->using(fn (): ?string => $this->totals()[$totalKey])->formatStateUsing(fn ($state) => Fields::rupiah($state)));
     }
 
     /**
      * TOTAL DP, DP PGA, WD, WD MANUAL, BONUS MANUAL typed like the sheet. Left
-     * empty, the day takes the jurnal's figure (shown faintly in the cell), so
-     * brands that do use the jurnal need not type them.
+     * empty, the day takes the jurnal's figure, shown in the cell as an
+     * ordinary value (not a grey placeholder, which users took for a locked
+     * cell, 2026-11-14) and replaced by whatever is typed over it.
      */
     protected function typedMoneyCell(string $name, string $key, string $label): TextInputColumn
     {
         // TOTAL sums what the day counts: typed, else the jurnal's.
         return $this->cell($name, $label, totalKey: $key)
-            ->placeholder(function (DailyPanelReport $record) use ($key): ?string {
+            ->state(function (DailyPanelReport $record) use ($name, $key): mixed {
+                if ($record->{$name} !== null) {
+                    return $record->{$name};
+                }
+
                 $jurnal = $this->rowsAreWholeBrand() ? $this->moneyByDay()->get($record->report_date->toDateString()) : null;
 
-                return $jurnal && bccomp($jurnal[$key], '0', 2) !== 0 ? Fields::rupiah($jurnal[$key]) : null;
+                return $jurnal && bccomp($jurnal[$key], '0', 2) !== 0 ? $jurnal[$key] : null;
             });
     }
 

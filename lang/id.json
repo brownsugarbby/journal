@@ -402,6 +402,7 @@
     "The books for :period are closed.": "Buku untuk :period sudah ditutup.",
     "The entry stays in the ledger marked VOID, and a reversal row brings the balance back.": "Entri tetap ada di buku dengan tanda VOID, dan baris pembalik mengembalikan saldonya.",
     "This entry can no longer be edited.": "Entri ini sudah tidak bisa diubah.",
+    "This month is closed (Tutup Buku). Reopen it to change the figures.": "Bulan ini sudah ditutup (Tutup Buku). Buka kembali untuk mengubah angka.",
     "This sheet is not paid.": "Lembar ini belum dibayar.",
     "This sheet is paid. Unpay it first to change it.": "Lembar ini sudah dibayar. Batalkan pembayaran dulu untuk mengubahnya.",
     "Tick for a WD done by hand outside the normal WD flow (not a member payout).": "Centang untuk WD yang dikerjakan manual di luar alur WD biasa (bukan pembayaran WD member).",
