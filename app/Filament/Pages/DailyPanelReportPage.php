@@ -45,7 +45,9 @@ class DailyPanelReportPage extends Page implements HasTable
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedPresentationChartLine;
 
-    protected static string|UnitEnum|null $navigationGroup = 'Jurnal';
+    // Its own menu item while the Jurnal is parked (was in the 'Jurnal' group).
+    // protected static string|UnitEnum|null $navigationGroup = 'Jurnal';
+    protected static string|UnitEnum|null $navigationGroup = null;
 
     protected static ?int $navigationSort = 2;
 
@@ -287,9 +289,10 @@ class DailyPanelReportPage extends Page implements HasTable
                 $this->cell('from_wd_manual', 'From WD manual'),
                 $this->formulaColumn('form_bersih_wd', 'Form bersih', self::GREEN),
                 $this->typedMoneyCell('bonus_manual', 'bonus_manual', 'Bonus manual'),
-                $this->differenceColumn('selisih_dp', 'Selisih DP'),
-                $this->differenceColumn('selisih_wd', 'Selisih WD'),
-                $this->differenceColumn('selisih_bonus', 'Selisih bonus'),
+                // Selisih (money vs panel) hidden for now, H D 2026-11-14; uncomment to show.
+                // $this->differenceColumn('selisih_dp', 'Selisih DP'),
+                // $this->differenceColumn('selisih_wd', 'Selisih WD'),
+                // $this->differenceColumn('selisih_bonus', 'Selisih bonus'),
                 TextColumn::make('updated_by')
                     ->label('Op')
                     ->formatStateUsing(fn ($state) => User::query()->find($state)?->username)

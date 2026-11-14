@@ -6,6 +6,7 @@ use App\Filament\Pages\DailyPanelReportPage;
 use App\Filament\Pages\Jurnal;
 use App\Filament\Pages\Reports\HitungBersih;
 use App\Filament\Pages\Reports\LaporanTutupBuku;
+use App\Filament\Resources\ActivityLogs\ActivityLogResource;
 use App\Filament\Resources\Brands\BrandResource;
 use App\Filament\Resources\Categories\CategoryResource;
 use App\Filament\Resources\Companies\CompanyResource;
@@ -20,8 +21,8 @@ use Illuminate\Support\Collection;
 
 /**
  * The top menu: the pages H D uses every day in their usual groups (asked
- * 2026-11-09, plus Jurnal, where staff work), and every other page the user
- * may open under "Lainnya", so nothing is a dead end.
+ * 2026-11-09), and every other page the user may open under "Lainnya", so
+ * nothing is a dead end. PARKED pages are left out of the menu and search.
  */
 class Menu
 {
@@ -29,7 +30,7 @@ class Menu
      * @var list<class-string>
      */
     public const MAIN = [
-        Jurnal::class,
+        // Jurnal::class, // parked 2026-11-14, see PARKED
         DailyPanelReportPage::class,
         LaporanTutupBuku::class,
         HitungBersih::class,
@@ -38,6 +39,18 @@ class Menu
         CategoryResource::class,
         PayRunResource::class,
         EmployeeResource::class,
+    ];
+
+    /**
+     * Not used for now (H D, 2026-11-14): no jurnal and no audit trail yet, the
+     * Daily Panel Report is typed by hand. The pages still work by their link;
+     * take a class out of this list to bring it back to the menu and search.
+     *
+     * @var list<class-string>
+     */
+    public const PARKED = [
+        Jurnal::class,
+        ActivityLogResource::class,
     ];
 
     public static function build(NavigationBuilder $builder): NavigationBuilder
@@ -79,7 +92,7 @@ class Menu
     private static function others(): array
     {
         return collect([...Filament::getPages(), ...Filament::getResources()])
-            ->reject(fn (string $class): bool => in_array($class, self::MAIN, true) || is_a($class, Dashboard::class, true))
+            ->reject(fn (string $class): bool => in_array($class, [...self::MAIN, ...self::PARKED], true) || is_a($class, Dashboard::class, true))
             ->values()
             ->all();
     }

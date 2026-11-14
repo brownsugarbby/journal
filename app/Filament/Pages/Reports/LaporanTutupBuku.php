@@ -124,14 +124,16 @@ class LaporanTutupBuku extends Page implements HasTable
                 ReportColumn::money('from_wd_manual', 'From WD manual'),
                 ReportColumn::money('form_bersih_wd', 'Form bersih'),
                 ReportColumn::money('bonus_manual', 'Bonus manual'),
-                ReportColumn::money('selisih_dp', 'Selisih DP'),
-                ReportColumn::money('selisih_wd', 'Selisih WD'),
-                ReportColumn::money('selisih_bonus', 'Selisih bonus'),
+                // Selisih (money vs panel) hidden for now, H D 2026-11-14; uncomment to show.
+                // ReportColumn::money('selisih_dp', 'Selisih DP'),
+                // ReportColumn::money('selisih_wd', 'Selisih WD'),
+                // ReportColumn::money('selisih_bonus', 'Selisih bonus'),
             ],
             rows: $rows,
             notes: [
                 __('Money columns: as typed on the Daily Panel Report; where left empty, from the jurnal (voided entries excluded): TOTAL DP = bank, TOTAL DP PGA = payment gateway (MASUK, before POTONGAN), TOTAL WD MANUAL = WD ticked "WD manual" (left out of TOTAL WD ALL), Bonus manual = bonus + cashback.'),
-                __('Panel columns from the Daily Panel Report. Selisih DP = DP all − From DP; Selisih WD = WD all − Form bersih (WD); Selisih bonus = Bonus manual − Form bonus. Red = money and panel do not match.'),
+                __('Panel columns from the Daily Panel Report.'),
+                // With the selisih columns: __('Panel columns from the Daily Panel Report. Selisih DP = DP all − From DP; Selisih WD = WD all − Form bersih (WD); Selisih bonus = Bonus manual − Form bonus. Red = money and panel do not match.'),
             ],
             landscape: true,
         );
